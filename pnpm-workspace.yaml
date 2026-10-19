@@ -1,0 +1,12 @@
+packages:
+  - packages/*
+
+# `pnpm deploy` (used by the Dockerfile) copies workspace dependencies into the
+# deployed folder instead of symlinking them, so the server image is
+# self-contained.
+injectWorkspacePackages: true
+
+# pnpm 10 blocks dependency install scripts unless listed here. esbuild (used
+# by Vite and tsx) installs its platform binary this way.
+onlyBuiltDependencies:
+  - esbuild

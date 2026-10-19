@@ -1,0 +1,31 @@
+{
+  "name": "@apiloupe/server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The apiloupe ingest API, query API and dashboard host.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "files": [
+    "dist",
+    "public"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx watch --conditions=source src/index.ts",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@apiloupe/shared": "workspace:*",
+    "@fastify/helmet": "13.2.0",
+    "@fastify/static": "10.1.6",
+    "fastify": "5.12.7",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "tsx": "4.23.15"
+  }
+}

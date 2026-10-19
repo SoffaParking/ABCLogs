@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  docker:
+    name: Docker image boots against Postgres
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: apiloupe
+          POSTGRES_PASSWORD: apiloupe
+          POSTGRES_DB: apiloupe
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U apiloupe -d apiloupe"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: apiloupe:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Start the container and wait for /readyz
+        run: |
+          docker run -d --name apiloupe --network host \
+            -e DATABASE_URL=postgres://apiloupe:apiloupe@127.0.0.1:5432/apiloupe \
+            apiloupe:ci
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8080/readyz; then echo; exit 0; fi
+            sleep 2
+          done
+          docker logs apiloupe
+          exit 1
+      - name: Dashboard and security headers
+        run: |
+          curl -sf http://127.0.0.1:8080/ | grep -q '<title>apiloupe</title>'
+          curl -sI http://127.0.0.1:8080/ | grep -qi "content-security-policy: default-src 'self'"
