@@ -3,7 +3,7 @@
 # One image: the API server, which also serves the built dashboard. Multi-arch
 # (amd64 / arm64) through `docker buildx build --platform linux/amd64,linux/arm64`.
 
-FROM node:24-bookworm-slim AS build
+FROM node:26-bookworm-slim AS build
 WORKDIR /repo
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile \
  && pnpm deploy --filter @apiloupe/server --prod /out \
  && cp -R packages/ui/dist /out/public
 
-FROM node:24-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 ENV NODE_ENV=production \
     PORT=8080 \
     PUBLIC_DIR=/app/public
