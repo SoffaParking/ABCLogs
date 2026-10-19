@@ -15,3 +15,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # The image follows Node's LTS line; moving to a new major is a deliberate
+    # change, not an automatic bump.
+    ignore:
+      - dependency-name: node
+        update-types: ['version-update:semver-major']
