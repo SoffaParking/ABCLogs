@@ -6,6 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-20
+
+### Added
+
+- `apiloupe-import --cloudwatch`: imports AWS CloudWatch Logs directly, with
+  the usual AWS credentials (profiles, SSO, roles, environment). Reads in
+  one-hour windows and checkpoints after each fully accepted window, so an
+  interrupted import resumes where it stopped; `--follow` keeps importing new
+  logs. Filters by stream prefix and CloudWatch filter pattern.
+- Lines wrapped by Docker's json-file driver or FireLens are unwrapped before
+  import, so their ids match the same lines shipped live.
+- Lines without a timestamp take their source's time (CloudWatch's), keeping
+  re-imports idempotent.
+
 ## [0.3.0] - 2026-10-20
 
 ### Added

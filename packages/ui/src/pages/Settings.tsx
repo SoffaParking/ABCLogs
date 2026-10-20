@@ -312,6 +312,9 @@ const logger = pino(opts, pino.multistream([
 ]));`}</pre>
         <p>Import existing JSON logs (pino and most JSON loggers) from a file or a pipe:</p>
         <pre className="code">{`pnpm import-logs --endpoint ${origin} --key ${shownKey} app.log`}</pre>
+        <p>Or straight from AWS CloudWatch Logs, resuming where it left off:</p>
+        <pre className="code">{`pnpm import-logs --endpoint ${origin} --key ${shownKey} \\
+  --cloudwatch --log-group /ecs/my-api --since 14d`}</pre>
         <p>Or post events from anywhere:</p>
         <pre className="code">{`curl -X POST ${origin}/ingest/v1/events \\
   -H 'Authorization: Bearer ${shownKey}' \\

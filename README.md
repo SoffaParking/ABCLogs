@@ -5,9 +5,9 @@ volume, latency and status codes, slice everything by severity with a single
 "show this level and above" control, and follow any failed request to the log
 lines and stack trace it produced.
 
-> **Status: 0.3 (milestone M3).** Ingest, the dashboard, grouped errors,
-> sign-in, the log importer and the Node.js SDK work. Native CloudWatch import
-> is next; see the [roadmap](#roadmap).
+> **Status: 0.4 (milestone M4).** Ingest, the dashboard, grouped errors,
+> sign-in, the Node.js SDK and the importer (files, pipes and AWS CloudWatch
+> Logs) work. Live tail and 1.0 are next; see the [roadmap](#roadmap).
 
 ## What it does
 
@@ -102,12 +102,38 @@ one. Lines that are not JSON are skipped unless you pass `--plain-text`.
 `--dry-run` shows what would be sent. Inside the Docker image the importer is
 already installed; from a clone, run `pnpm import-logs …`.
 
-From **AWS CloudWatch Logs** (native import is on the roadmap):
+**From AWS CloudWatch Logs**, with the same credentials as the `aws` CLI:
 
 ```sh
-aws logs filter-log-events --log-group-name /ecs/my-api --start-time 1760000000000 \
-  --output json | jq -r '.events[].message' | apiloupe-import --key alk_...
+apiloupe-import --key alk_... --cloudwatch --log-group /ecs/my-api \
+  --stream-prefix api --region eu-central-1 --since 14d
 ```
+
+It reads in one-hour windows and saves its place in a checkpoint file after
+each window apiloupe has fully accepted. An interrupted import picks up where
+it stopped, and running it again later imports only what is new. `--follow`
+keeps it running, importing new logs every 30 seconds. Lines the SDK already
+shipped live are the same events (same ids), so backfilling a period that was
+also shipped live adds nothing twice.
+
+The credentials need `logs:FilterLogEvents` on the log group:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "logs:FilterLogEvents",
+      "Resource": "arn:aws:logs:eu-central-1:123456789012:log-group:/ecs/my-api:*"
+    }
+  ]
+}
+```
+
+Reading CloudWatch Logs through this API costs nothing beyond data transfer
+when run outside AWS. Inside Docker on EC2, an instance role is only reachable
+from containers when the instance's metadata hop limit is 2 or more.
 
 **Anything else** can post events directly. See the
 [ingest API](docs/ingest-api.md):
@@ -184,7 +210,7 @@ See [docs/architecture.md](docs/architecture.md) for how the pieces fit.
 | M1        | Ingest API, overview with severity filter, requests and logs pages, importer, sign-in | done   |
 | M2        | Node.js SDK: Express middleware and pino destination                                  | done   |
 | M3        | Grouped errors: issues, resolve and ignore, regressions, trends                       | done   |
-| M4        | AWS CloudWatch import with resume                                                     |        |
+| M4        | AWS CloudWatch import with resume                                                     | done   |
 | M5        | Live tail, sampling, end-to-end browser tests, 1.0                                    |        |
 
 ## Contributing
