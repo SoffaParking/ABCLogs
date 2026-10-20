@@ -59,6 +59,15 @@ A line sent live and the same line imported later from your log files (with
 `apiloupe-import`) are the same event; importing a period you already shipped
 adds nothing.
 
+### Sampling
+
+For busy apps, `sampleRate: 0.1` sends one in ten successful requests and logs
+below warn. Errors, warnings and failed requests are always sent, and the
+dashboard counts each sampled event as ten, so totals and charts stay right.
+Which lines are kept depends only on their content: importing the same logs
+later with `apiloupe-import --sample-rate 0.1` keeps the same ones, so nothing
+is counted twice.
+
 ### By hand
 
 ```js
@@ -85,17 +94,18 @@ apiloupe.captureException(err, { requestId: req.id });
 
 ## Options
 
-| Option            | Default        | Meaning                                                    |
-| ----------------- | -------------- | ---------------------------------------------------------- |
-| `endpoint`, `key` | none           | Where to send. Without both, nothing is sent.              |
-| `service`         | none           | Names this app when several share a project.               |
-| `captureBodies`   | `false`        | Also send bodies, query strings, headers and IPs (masked). |
-| `maxQueue`        | `10000`        | Events held while sending is slow or failing.              |
-| `batchSize`       | `500`          | Events per request (at most 1000).                         |
-| `flushIntervalMs` | `2000`         | How often queued events are sent.                          |
-| `timeoutMs`       | `10000`        | Per request.                                               |
-| `onError`         | a rare warning | Called with sending problems; `false` for silence.         |
-| `flushOnExit`     | `true`         | Try to send what is queued when the event loop empties.    |
+| Option            | Default        | Meaning                                                      |
+| ----------------- | -------------- | ------------------------------------------------------------ |
+| `endpoint`, `key` | none           | Where to send. Without both, nothing is sent.                |
+| `service`         | none           | Names this app when several share a project.                 |
+| `captureBodies`   | `false`        | Also send bodies, query strings, headers and IPs (masked).   |
+| `sampleRate`      | `1`            | Share of successful requests and routine logs to send (0–1). |
+| `maxQueue`        | `10000`        | Events held while sending is slow or failing.                |
+| `batchSize`       | `500`          | Events per request (at most 1000).                           |
+| `flushIntervalMs` | `2000`         | How often queued events are sent.                            |
+| `timeoutMs`       | `10000`        | Per request.                                                 |
+| `onError`         | a rare warning | Called with sending problems; `false` for silence.           |
+| `flushOnExit`     | `true`         | Try to send what is queued when the event loop empties.      |
 
 `express({ requestId, skip })`: how to find a request's id (default `req.id`,
 then the `x-request-id` header) and which requests to leave out.

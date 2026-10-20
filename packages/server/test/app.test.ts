@@ -94,6 +94,7 @@ describe('dashboard hosting', () => {
     const res = await app.inject({ url: '/api/v1/meta' });
     expect(res.json()).toEqual({
       name: 'apiloupe',
+      version: '1.0.0',
       levels: ['trace', 'debug', 'info', 'warn', 'error', 'fatal'],
     });
   });

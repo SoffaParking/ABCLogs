@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import Fastify, { LogController, type FastifyError, type FastifyInstance } from 'fastify';
@@ -19,6 +19,13 @@ import { HttpError } from './http.js';
 import { IngestKeys } from './ingest/keys.js';
 import { ingestRoutes } from './ingest/routes.js';
 import { Partitions } from './partitions.js';
+
+/** This server's version, from its package.json (next to src/ and dist/ alike). */
+export const VERSION = (
+  JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+    version: string;
+  }
+).version;
 
 export interface AppDeps {
   config: Config;
@@ -111,7 +118,7 @@ export async function buildApp({ config, pool }: AppDeps): Promise<App> {
         void reply.header('cache-control', 'no-store');
         next();
       });
-      api.get('/meta', () => ({ name: 'apiloupe', levels: LEVEL_NAMES }));
+      api.get('/meta', () => ({ name: 'apiloupe', version: VERSION, levels: LEVEL_NAMES }));
       if (ctx) {
         installSessionHooks(api, ctx);
         authRoutes(api, ctx);
