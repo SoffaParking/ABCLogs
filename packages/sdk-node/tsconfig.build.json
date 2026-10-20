@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false,
+    // The JavaScript is bundled by esbuild (scripts/build.mjs); tsc only
+    // writes the type declarations.
+    "emitDeclarationOnly": true,
+    "declarationMap": false
+  },
+  "include": ["src"]
+}

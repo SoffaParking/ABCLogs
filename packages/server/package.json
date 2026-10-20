@@ -28,7 +28,11 @@
   "devDependencies": {
     "@types/pg": "8.23.1",
     "tsx": "4.23.15",
-    "@apiloupe/importer": "workspace:*"
+    "@apiloupe/importer": "workspace:*",
+    "@apiloupe/node": "workspace:*",
+    "express": "4.22.3",
+    "@types/express": "4.17.25",
+    "pino": "10.4.0"
   },
   "bin": {
     "apiloupe-server": "./dist/cli.js"
