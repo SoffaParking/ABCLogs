@@ -21,6 +21,7 @@ Options:
   --include-bodies    keep request bodies, query strings, headers and IPs (redacted)
   --plain-text        import lines that are not JSON as info logs
   --batch-size <n>    events per request, 1 to 1000 (default 500)
+  --sample-rate <r>   keep this share (0 to 1) of successful requests and logs below warn
   --dry-run           read and count only; send nothing
   --demo [minutes]    send synthetic demo traffic for the last N minutes (default 120)
   -q, --quiet         no progress output
@@ -66,6 +67,7 @@ try {
       'include-bodies': { type: 'boolean' },
       'plain-text': { type: 'boolean' },
       'batch-size': { type: 'string' },
+      'sample-rate': { type: 'string' },
       'dry-run': { type: 'boolean' },
       demo: { type: 'boolean' },
       quiet: { type: 'boolean', short: 'q' },
@@ -99,6 +101,11 @@ if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 1000) {
   exit('--batch-size must be 1 to 1000', 2);
 }
 
+const sampleRate = values['sample-rate'] === undefined ? undefined : Number(values['sample-rate']);
+if (sampleRate !== undefined && !(sampleRate > 0 && sampleRate <= 1)) {
+  exit('--sample-rate must be above 0 and at most 1', 2);
+}
+
 const quiet = values.quiet ?? false;
 const dryRun = values['dry-run'] ?? false;
 const progress = (stats: ImportStats) => {
@@ -116,6 +123,7 @@ const options: ImportOptions = {
   plainText: values['plain-text'] ?? false,
   batchSize,
   dryRun,
+  ...(sampleRate !== undefined ? { sampleRate } : {}),
 };
 
 function plural(n: number, word: string): string {
@@ -135,6 +143,8 @@ function report(stats: ImportStats): void {
   }
   if (skipped.noTime > 0)
     lines.push(`${plural(skipped.noTime, 'JSON line')} without a timestamp, skipped`);
+  if (stats.sampledOut > 0)
+    lines.push(`${plural(stats.sampledOut, 'event')} left out by --sample-rate`);
   for (const r of stats.rejections) lines.push(`  line ${r.line}: ${r.reason}`);
   if (stats.rejected > stats.rejections.length) {
     lines.push(`  … and ${stats.rejected - stats.rejections.length} more refused`);

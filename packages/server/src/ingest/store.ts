@@ -19,6 +19,7 @@ export interface StoreResult {
 
 interface InsertedRequest {
   time: Date;
+  weight: number;
   service: string;
   level: number;
   method: string;
@@ -29,6 +30,7 @@ interface InsertedRequest {
 
 interface InsertedLog {
   time: Date;
+  weight: number;
   id: string;
   service: string;
   level: number;
@@ -85,12 +87,13 @@ async function insertRequests(
 ): Promise<InsertedRequest[]> {
   const { rows: inserted } = await client.query<InsertedRequest>(
     `INSERT INTO request_events
-       (project_id, time, id, service, level, method, route, path, status, duration_ms, request_id, attrs)
+       (project_id, time, id, service, level, method, route, path, status, duration_ms, request_id, attrs,
+        weight)
      SELECT $1::bigint, u.*
        FROM unnest($2::timestamptz[], $3::text[], $4::text[], $5::int2[], $6::text[], $7::text[],
-                   $8::text[], $9::int2[], $10::real[], $11::text[], $12::jsonb[]) AS u
+                   $8::text[], $9::int2[], $10::real[], $11::text[], $12::jsonb[], $13::int2[]) AS u
      ON CONFLICT DO NOTHING
-     RETURNING time, service, level, method, route, status, duration_ms`,
+     RETURNING time, weight, service, level, method, route, status, duration_ms`,
     [
       projectId,
       rows.map((r) => new Date(r.time).toISOString()),
@@ -104,6 +107,7 @@ async function insertRequests(
       rows.map((r) => r.durationMs),
       rows.map((r) => r.requestId),
       rows.map((r) => r.attrs),
+      rows.map((r) => r.weight),
     ],
   );
   return inserted;
@@ -153,12 +157,12 @@ async function insertLogs(
   const { rows: inserted } = await client.query<InsertedLog>(
     `INSERT INTO log_events
        (project_id, time, id, service, level, message, request_id, error_type, error_message,
-        error_stack, attrs, issue_id)
+        error_stack, attrs, issue_id, weight)
      SELECT $1::bigint, u.*
        FROM unnest($2::timestamptz[], $3::text[], $4::text[], $5::int2[], $6::text[], $7::text[],
-                   $8::text[], $9::text[], $10::text[], $11::jsonb[], $12::bigint[]) AS u
+                   $8::text[], $9::text[], $10::text[], $11::jsonb[], $12::bigint[], $13::int2[]) AS u
      ON CONFLICT DO NOTHING
-     RETURNING time, id, service, level, issue_id`,
+     RETURNING time, weight, id, service, level, issue_id`,
     [
       projectId,
       rows.map((r) => new Date(r.time).toISOString()),
@@ -172,6 +176,7 @@ async function insertLogs(
       rows.map((r) => r.errorStack),
       rows.map((r) => r.attrs),
       rows.map((r) => issueOf.get(r) ?? null),
+      rows.map((r) => r.weight),
     ],
   );
   return inserted;
@@ -218,11 +223,12 @@ async function upsertRequestRollups(
       };
       cells.set(key, cell);
     }
-    cell.count += 1;
+    // A sampled event stands for `weight` events in every count.
+    cell.count += row.weight;
     if (row.duration_ms !== null) {
-      cell.sum += row.duration_ms;
+      cell.sum += row.duration_ms * row.weight;
       cell.max = Math.max(cell.max ?? 0, row.duration_ms);
-      cell.hist[histogramBucket(row.duration_ms)]! += 1;
+      cell.hist[histogramBucket(row.duration_ms)]! += row.weight;
     }
   }
   const sorted = [...cells.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([, c]) => c);
@@ -264,12 +270,16 @@ async function upsertLevelRollups(
     string,
     { bucket: number; service: string; kind: string; level: number; count: number }
   >();
-  const add = (kind: string, row: { time: Date; service: string; level: number }) => {
+  const add = (
+    kind: string,
+    row: { time: Date; service: string; level: number; weight: number },
+  ) => {
     const bucket = minute(row.time);
     const key = JSON.stringify([bucket, row.service, kind, row.level]);
     const cell = cells.get(key);
-    if (cell) cell.count += 1;
-    else cells.set(key, { bucket, service: row.service, kind, level: row.level, count: 1 });
+    if (cell) cell.count += row.weight;
+    else
+      cells.set(key, { bucket, service: row.service, kind, level: row.level, count: row.weight });
   };
   for (const row of requests) add('request', row);
   for (const row of logs) add('log', row);

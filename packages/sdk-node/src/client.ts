@@ -7,6 +7,7 @@ import {
   MAX_BATCH_EVENTS,
   normalizeLevel,
   redact,
+  sample,
   type EventInput,
   type IngestResult,
 } from '@apiloupe/shared';
@@ -29,7 +30,7 @@ import { post } from './transport.js';
 
 const gzip = promisify(gzipCallback);
 
-export const VERSION = '0.2.0';
+export const VERSION = '1.0.0';
 
 /** A queued item: a ready event, or a raw log line mapped only when sent (off the hot path). */
 type Item = { event: EventInput } | { line: string; stream: StreamConfig };
@@ -56,6 +57,7 @@ export class Client implements Apiloupe {
   readonly enabled: boolean;
   readonly service: string | undefined;
   readonly captureBodies: boolean;
+  readonly #sampleRate: number;
   readonly #url: URL | null;
   readonly #key: string;
   readonly #batchSize: number;
@@ -71,7 +73,7 @@ export class Client implements Apiloupe {
   #stopped = false;
   #exitFlushed = false;
   #lastWarnAt = 0;
-  readonly #stats = { sent: 0, dropped: 0, failedAttempts: 0 };
+  readonly #stats = { sent: 0, dropped: 0, failedAttempts: 0, sampledOut: 0 };
   #lastError: string | null = null;
   readonly #onBeforeExit = () => {
     if (this.#exitFlushed || this.#stopped || this.#backlog() === 0) return;
@@ -85,6 +87,10 @@ export class Client implements Apiloupe {
     this.enabled = Boolean(this.#url && this.#key);
     this.service = options.service || undefined;
     this.captureBodies = options.captureBodies ?? false;
+    this.#sampleRate =
+      typeof options.sampleRate === 'number' && options.sampleRate >= 0
+        ? Math.min(options.sampleRate, 1)
+        : 1;
     this.#batchSize = positive(options.batchSize, 500, MAX_BATCH_EVENTS);
     this.#timeoutMs = positive(options.timeoutMs, 10_000);
     this.#onError = options.onError;
@@ -147,7 +153,10 @@ export class Client implements Apiloupe {
 
   /** Queues a ready event (used by the middleware and the methods above). */
   enqueue(event: EventInput): void {
-    this.#push({ event: { ...event, id: event.id ?? randomUUID() } });
+    const id = event.id ?? randomUUID();
+    const kept = sample({ ...event, id }, id, this.#sampleRate);
+    if (kept) this.#push({ event: kept });
+    else if (this.enabled) this.#stats.sampledOut += 1;
   }
 
   async flush(timeoutMs = 5000): Promise<void> {
@@ -193,6 +202,7 @@ export class Client implements Apiloupe {
       queued: this.#backlog(),
       sent: this.#stats.sent,
       dropped: this.#stats.dropped,
+      sampledOut: this.#stats.sampledOut,
       failedAttempts: this.#stats.failedAttempts,
       lastError: this.#lastError,
     };
@@ -313,7 +323,14 @@ export class Client implements Apiloupe {
           if (event.type === 'request' && !item.stream.requests) continue;
           const level = normalizeLevel(event.level) ?? LEVEL.info;
           if (level < item.stream.minLevel) continue;
-          event.id = eventIdForLine(item.line);
+          const id = eventIdForLine(item.line);
+          // By line hash: an import of the same logs at the same rate keeps the same lines.
+          const kept = sample({ ...event, id }, id, this.#sampleRate);
+          if (!kept) {
+            this.#stats.sampledOut += 1;
+            continue;
+          }
+          event = kept;
         } else {
           event = item.event;
           if (this.service && !event.service) event.service = this.service;

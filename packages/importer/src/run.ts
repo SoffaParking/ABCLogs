@@ -1,6 +1,12 @@
 import { promisify } from 'node:util';
 import { gzip as gzipCb } from 'node:zlib';
-import { mapLogLine, unwrapLine, type EventInput, type IngestResult } from '@apiloupe/shared';
+import {
+  mapLogLine,
+  sample,
+  unwrapLine,
+  type EventInput,
+  type IngestResult,
+} from '@apiloupe/shared';
 import { eventIdForLine } from '@apiloupe/shared/node';
 
 const gzip = promisify(gzipCb);
@@ -20,6 +26,12 @@ export interface ImportOptions {
   batchSize?: number;
   /** Parse and count, send nothing. */
   dryRun?: boolean;
+  /**
+   * Keep only this share (0 to 1) of successful requests and logs below
+   * warn, as the SDK's `sampleRate` does. Use the SDK's rate when importing
+   * logs it already shipped, so the same lines are kept.
+   */
+  sampleRate?: number;
   /** Called after every batch. */
   onProgress?: (stats: ImportStats) => void;
   /** Base delay of the retry backoff. */
@@ -43,6 +55,8 @@ export interface ImportStats {
   lines: number;
   /** Lines that became events. */
   events: number;
+  /** Events left out by `sampleRate`. */
+  sampledOut: number;
   skipped: { blank: number; notJson: number; noTime: number };
   batches: number;
   accepted: number;
@@ -61,6 +75,7 @@ export function emptyStats(): ImportStats {
   return {
     lines: 0,
     events: 0,
+    sampledOut: 0,
     skipped: { blank: 0, notJson: 0, noTime: 0 },
     batches: 0,
     accepted: 0,
@@ -117,8 +132,14 @@ export class Sender {
       else this.stats.skipped.noTime += 1;
       return;
     }
+    const id = eventIdForLine(own);
+    const kept = sample({ ...mapped.event, id }, id, this.options.sampleRate);
+    if (!kept) {
+      this.stats.sampledOut += 1;
+      return;
+    }
     this.stats.events += 1;
-    this.batch.push({ ...mapped.event, id: eventIdForLine(own) });
+    this.batch.push(kept);
     this.lineNumbers.push(this.stats.lines);
     if (this.batch.length >= this.batchSize) await this.send();
   }
@@ -184,7 +205,7 @@ async function request(url: string, init: RequestInit, options: ImportOptions): 
   const headers = {
     ...(init.headers as Record<string, string> | undefined),
     authorization: `Bearer ${options.key ?? ''}`,
-    'user-agent': options.userAgent ?? 'apiloupe-import',
+    'user-agent': options.userAgent ?? 'apiloupe-import/1.0.0',
   };
   for (let attempt = 1; ; attempt++) {
     let wait: number;

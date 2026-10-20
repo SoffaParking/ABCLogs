@@ -21,6 +21,11 @@ type RefParams = { Params: { slug: string; ref: string } };
 
 // Logs written while serving a request are looked for this far either side of it.
 const RELATED_WINDOW_MS = 60 * 60_000;
+// Live tail: each poll re-reads this far before its cursor. Rows of a batch
+// carry its transaction's start time, and batches can commit out of that
+// order; the client drops what it has already shown.
+const TAIL_OVERLAP_MS = 10_000;
+const TAIL_LIMIT = 500;
 const PREVIEW_CHARS = 500;
 
 interface RequestRow {
@@ -34,6 +39,7 @@ interface RequestRow {
   status: number;
   duration_ms: number | null;
   request_id: string | null;
+  weight: number;
   attrs?: unknown;
 }
 
@@ -46,6 +52,7 @@ interface LogRow {
   request_id: string | null;
   error_type: string | null;
   error_message: string | null;
+  weight: number;
   has_stack?: boolean;
   error_stack?: string | null;
   attrs?: unknown;
@@ -64,6 +71,8 @@ function requestOut(row: RequestRow) {
     status: row.status,
     durationMs: row.duration_ms,
     requestId: row.request_id,
+    // A sampled event: it stands for this many in the charts.
+    ...(row.weight > 1 ? { weight: row.weight } : {}),
     ...(row.attrs !== undefined ? { attrs: row.attrs } : {}),
   };
 }
@@ -78,6 +87,7 @@ function logOut(row: LogRow) {
     requestId: row.request_id,
     errorType: row.error_type,
     errorMessage: row.error_message,
+    ...(row.weight > 1 ? { weight: row.weight } : {}),
     ...(row.has_stack !== undefined ? { hasStack: row.has_stack } : {}),
     ...(row.error_stack !== undefined ? { errorStack: row.error_stack } : {}),
     ...(row.attrs !== undefined ? { attrs: row.attrs } : {}),
@@ -88,9 +98,9 @@ function logOut(row: LogRow) {
 }
 
 const REQUEST_COLUMNS =
-  'time, id, service, level, method, route, path, status, duration_ms, request_id';
+  'time, id, service, level, method, route, path, status, duration_ms, request_id, weight';
 const LOG_PREVIEW_COLUMNS = `time, id, service, level, left(message, ${PREVIEW_CHARS}) AS message,
-  request_id, error_type, left(error_message, ${PREVIEW_CHARS}) AS error_message,
+  request_id, error_type, left(error_message, ${PREVIEW_CHARS}) AS error_message, weight,
   error_stack IS NOT NULL AS has_stack, issue_id`;
 
 /** Raw request and log events: filtered lists, newest first, and single-event detail. */
@@ -201,13 +211,58 @@ export function eventRoutes(app: FastifyInstance, ctx: AppContext): void {
     return page(rows, limit, logOut);
   });
 
+  app.get<Params>('/projects/:slug/logs/tail', async (req) => {
+    requireUser(req);
+    const q = req.query;
+    const project = await projectBySlug(ctx.pool, req.params.slug);
+    // Only recent events: keeps the query to the newest partitions.
+    const w = new Where('project_id = ?', project.id).add(`time >= now() - interval '1 day'`);
+    if (q.service) w.add('service = ?', q.service);
+    const minLevel = minLevelParam(q.minLevel);
+    if (minLevel !== undefined) w.add('level >= ?', minLevel);
+    if (q.errorsOnly === 'true') {
+      w.add('(error_type IS NOT NULL OR error_message IS NOT NULL OR error_stack IS NOT NULL)');
+    }
+    if (q.q) {
+      const pattern = likePattern(q.q);
+      w.add(
+        `(message ILIKE ? ESCAPE '\\' OR error_message ILIKE ? ESCAPE '\\' OR error_type ILIKE ? ESCAPE '\\')`,
+        pattern,
+        pattern,
+        pattern,
+      );
+    }
+    if (q.requestId) w.add('request_id = ?', q.requestId);
+    let order = 'received_at DESC, id DESC';
+    if (q.since) {
+      const since = Date.parse(q.since);
+      if (Number.isNaN(since)) throw badRequest('since is not a valid time');
+      w.add('received_at > ?', new Date(since - TAIL_OVERLAP_MS));
+      order = 'received_at, id';
+    }
+    const { rows } = await ctx.pool.query<LogRow & { received_at: Date }>(
+      `SELECT ${LOG_PREVIEW_COLUMNS}, received_at FROM log_events WHERE ${w.sql()}
+        ORDER BY ${order} LIMIT ${q.since ? TAIL_LIMIT : 50}`,
+      w.params,
+    );
+    const newest = rows.reduce<number>((max, row) => Math.max(max, row.received_at.getTime()), 0);
+    return {
+      // Newest first, in arrival order.
+      items: rows.sort((a, b) => b.received_at.getTime() - a.received_at.getTime()).map(logOut),
+      cursor:
+        newest > 0
+          ? new Date(newest).toISOString()
+          : (q.since ?? new Date(Date.now() - TAIL_OVERLAP_MS).toISOString()),
+    };
+  });
+
   app.get<RefParams>('/projects/:slug/logs/:ref', async (req) => {
     requireUser(req);
     const project = await projectBySlug(ctx.pool, req.params.slug);
     const ref = decodeRef(req.params.ref);
     const { rows } = await ctx.pool.query<LogRow>(
       `SELECT time, id, service, level, message, request_id, error_type, error_message,
-              error_stack, attrs, issue_id
+              error_stack, attrs, issue_id, weight
          FROM log_events WHERE project_id = $1 AND time = $2 AND id = $3`,
       [project.id, new Date(ref.time), ref.id],
     );

@@ -5,3 +5,4 @@ export * from './levels.js';
 export * from './loglines.js';
 export * from './redact.js';
 export * from './routes.js';
+export * from './sampling.js';

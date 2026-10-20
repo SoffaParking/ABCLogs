@@ -38,6 +38,12 @@ export interface ApiloupeOptions {
    */
   captureBodies?: boolean;
   /**
+   * For busy apps: send only this share (0 to 1) of successful requests and
+   * of logs below warn. Errors, warnings and failed requests are always
+   * sent, and the dashboard scales the counts back up. Default 1 (all).
+   */
+  sampleRate?: number;
+  /**
    * Told about sending problems. The default prints one `console.warn` at
    * most every five minutes; `false` stays silent.
    */
@@ -118,6 +124,8 @@ export interface ApiloupeStats {
   sent: number;
   /** Lost: pushed out of a full queue, refused by the server, or unsendable. */
   dropped: number;
+  /** Left out on purpose by `sampleRate`. */
+  sampledOut: number;
   /** Failed attempts (each is retried). */
   failedAttempts: number;
   lastError: string | null;

@@ -96,6 +96,7 @@ export interface InsertedOccurrence {
   time: Date;
   id: string;
   level: number;
+  weight: number;
 }
 
 /**
@@ -119,9 +120,9 @@ export async function recordOccurrences(
     const t = row.time.getTime();
     const cell = byIssue.get(issue);
     if (!cell) {
-      byIssue.set(issue, { n: 1, first: t, last: t, lastId: row.id, level: row.level });
+      byIssue.set(issue, { n: row.weight, first: t, last: t, lastId: row.id, level: row.level });
     } else {
-      cell.n += 1;
+      cell.n += row.weight;
       cell.first = Math.min(cell.first, t);
       if (t >= cell.last) {
         cell.last = t;
@@ -132,8 +133,8 @@ export async function recordOccurrences(
     const hour = Math.floor(t / HOUR_MS) * HOUR_MS;
     const key = `${issue}|${hour}`;
     const h = byHour.get(key);
-    if (h) h.n += 1;
-    else byHour.set(key, { issue, hour, n: 1 });
+    if (h) h.n += row.weight;
+    else byHour.set(key, { issue, hour, n: row.weight });
   }
   if (byIssue.size === 0) return;
 

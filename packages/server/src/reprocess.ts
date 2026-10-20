@@ -35,6 +35,7 @@ interface StoredError {
   error_message: string | null;
   error_stack: string | null;
   issue_id: number | null;
+  weight: number;
 }
 
 interface ExistingIssue {
@@ -81,7 +82,7 @@ export async function reprocessIssues(pool: pg.Pool, projectId: number): Promise
     let cursor: { time: Date; id: string } | null = null;
     for (;;) {
       const { rows }: pg.QueryResult<StoredError> = await client.query<StoredError>(
-        `SELECT time, id, service, level, message, error_type, error_message, error_stack, issue_id
+        `SELECT time, id, service, level, message, error_type, error_message, error_stack, issue_id, weight
            FROM log_events
           WHERE project_id = $1 AND level >= $2 ${cursor ? 'AND (time, id) > ($4, $5)' : ''}
           ORDER BY time, id LIMIT $3`,
@@ -112,7 +113,7 @@ export async function reprocessIssues(pool: pg.Pool, projectId: number): Promise
           };
           groups.set(group.fingerprint, g);
         }
-        g.count += 1;
+        g.count += row.weight;
         g.first = Math.min(g.first, t);
         if (t >= g.last) {
           g.last = t;
@@ -120,7 +121,7 @@ export async function reprocessIssues(pool: pg.Pool, projectId: number): Promise
         }
         g.level = Math.max(g.level, row.level);
         const hour = Math.floor(t / HOUR_MS) * HOUR_MS;
-        g.hours.set(hour, (g.hours.get(hour) ?? 0) + 1);
+        g.hours.set(hour, (g.hours.get(hour) ?? 0) + row.weight);
         const oldIssue = row.issue_id === null ? null : Number(row.issue_id);
         if (oldIssue !== null) g.votes.set(oldIssue, (g.votes.get(oldIssue) ?? 0) + 1);
         events.push({ time: row.time, id: row.id, fingerprint: group.fingerprint, oldIssue });
