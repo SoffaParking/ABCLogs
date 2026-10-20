@@ -52,7 +52,9 @@ describe.skipIf(!hasDatabase)('ingest', () => {
       headers: { authorization: `Bearer ${key}` },
     });
     expect(ok.json()).toMatchObject({ ok: true, project: { slug } });
-    for (const bad of [undefined, 'Bearer nope', `Bearer ${key.slice(0, -1)}x`]) {
+    // The real key with its last character changed (to something it is not).
+    const altered = key.slice(0, -1) + (key.endsWith('a') ? 'b' : 'a');
+    for (const bad of [undefined, 'Bearer nope', `Bearer ${altered}`]) {
       const res = await t.app.inject({
         url: '/ingest/v1/check',
         headers: bad ? { authorization: bad } : {},
