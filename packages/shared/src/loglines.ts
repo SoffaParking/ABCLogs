@@ -234,3 +234,40 @@ function asStatus(value: unknown): number | undefined {
   const n = asNumber(value);
   return n !== undefined && Number.isInteger(n) && n >= 100 && n <= 599 ? n : undefined;
 }
+
+// The fields a log shipper wraps around an application's line: Docker's
+// json-file driver, and Fluent Bit / FireLens records from ECS.
+const ENVELOPE_KEYS = new Set([
+  'log',
+  'stream',
+  'time',
+  'source',
+  'container_id',
+  'container_name',
+  'ecs_cluster',
+  'ecs_task_arn',
+  'ecs_task_definition',
+  'partial_message',
+  'partial_id',
+  'partial_ordinal',
+  'partial_last',
+]);
+
+/**
+ * The application's own line inside a log shipper's envelope, such as
+ * Docker's `{"log":"…\n","stream":"stdout","time":"…"}`. Lines that are not
+ * wrapped come back unchanged. Unwrapping first keeps event ids equal to the
+ * ids of the same lines shipped live.
+ */
+export function unwrapLine(line: string): string {
+  if (!line.includes('"log"')) return line;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(line);
+  } catch {
+    return line;
+  }
+  if (!isRecord(parsed) || typeof parsed.log !== 'string') return line;
+  for (const key of Object.keys(parsed)) if (!ENVELOPE_KEYS.has(key)) return line;
+  return parsed.log.replace(/\r?\n$/, '');
+}
