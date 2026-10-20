@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-20
+
+### Added
+
+- `@apiloupe/node`, the Node.js SDK: Express middleware (requests with route,
+  status, duration and request id), an Express error handler, a pino stream
+  (every log line, the same ids as the importer so live and backfilled lines
+  are stored once), `log` and `captureException`. Bounded queue, gzip
+  batches, retries with `Retry-After`, never throws or holds the process
+  open. No runtime dependencies; CommonJS and ESM; Node 20+.
+- `examples/express-pino`, a small app wired to apiloupe.
+- Node.js setup snippet on the project settings page.
+
 ## [0.1.0] - 2026-10-20
 
 ### Added
