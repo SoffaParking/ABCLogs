@@ -1,11 +1,11 @@
 import { LEVEL, LEVEL_NAMES, type LevelName } from '@apiloupe/shared';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Link, useLocation } from 'wouter';
-import { api, type Facets, type Levels, type Overview } from '../api';
+import { api, type Facets, type Levels, type Overview, type TopIssues } from '../api';
 import { LineChart, StackedBars, type Series } from '../components/charts';
 import { linkWith, useRefreshInterval } from '../components/Shell';
-import { Card, Empty, ErrorNote, Segmented, Spinner, Stat } from '../components/ui';
-import { formatCount, formatDuration, formatPercent, formatRate } from '../format';
+import { Card, Empty, ErrorNote, LevelBadge, Segmented, Spinner, Stat } from '../components/ui';
+import { formatAgo, formatCount, formatDuration, formatPercent, formatRate } from '../format';
 import { useQueryState } from '../hooks';
 import { rangeParams } from '../range';
 
@@ -87,6 +87,13 @@ export function OverviewPage({ slug }: { slug: string }) {
         service,
         kind: kind === 'all' ? undefined : kind,
       }),
+    refetchInterval,
+    placeholderData: keepPreviousData,
+  });
+
+  const topIssues = useQuery({
+    queryKey: ['top-issues', slug, range],
+    queryFn: () => api.get<TopIssues>(`/projects/${slug}/issues/top`, rangeParams(range)),
     refetchInterval,
     placeholderData: keepPreviousData,
   });
@@ -227,6 +234,51 @@ export function OverviewPage({ slug }: { slug: string }) {
             );
           })}
         </div>
+      </Card>
+
+      <Card
+        title="Top issues"
+        actions={
+          <Link href={linkWith(`/p/${slug}/issues`, params)} className="small">
+            {topIssues.data && topIssues.data.newIssues > 0
+              ? `${topIssues.data.newIssues} new in this range · all issues →`
+              : 'All issues →'}
+          </Link>
+        }
+      >
+        {!topIssues.data ? (
+          <Spinner />
+        ) : topIssues.data.items.length === 0 ? (
+          <Empty>No unresolved errors in this time range.</Empty>
+        ) : (
+          <div className="table-wrap">
+            <table className="table">
+              <tbody>
+                {topIssues.data.items.map((issue) => (
+                  <tr
+                    key={issue.id}
+                    className="clickable"
+                    onClick={() => navigate(linkWith(`/p/${slug}/issues/${issue.id}`, params))}
+                  >
+                    <td className="wide">
+                      <LevelBadge level={issue.level} />{' '}
+                      <span className="issue-title-text">{issue.title}</span>
+                      {issue.culprit && (
+                        <div className="muted small">
+                          <code>{issue.culprit}</code>
+                        </div>
+                      )}
+                    </td>
+                    <td className="num">
+                      {formatCount(issue.rangeCount)} <span className="muted small">events</span>
+                    </td>
+                    <td className="muted nowrap small">{formatAgo(issue.lastSeen)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
       <Card title="Top routes">

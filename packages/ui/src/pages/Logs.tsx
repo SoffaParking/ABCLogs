@@ -1,8 +1,9 @@
 import { LEVEL_NAMES, type LevelName } from '@apiloupe/shared';
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { api, type LogItem, type Page, type RequestItem } from '../api';
 import { SearchBox } from '../components/filters';
+import { StackTrace } from '../components/StackTrace';
 import { linkWith, useRefreshInterval } from '../components/Shell';
 import {
   Card,
@@ -275,6 +276,16 @@ function LogDrawer({
               ],
             ]}
           />
+          {detail.data.log.issueId != null && (
+            <p>
+              <Link
+                href={linkWith(`/p/${slug}/issues/${detail.data.log.issueId}`, params)}
+                className="button small"
+              >
+                Open the issue this error belongs to →
+              </Link>
+            </p>
+          )}
           {(detail.data.log.errorType ||
             detail.data.log.errorMessage ||
             detail.data.log.errorStack) && (
@@ -285,9 +296,7 @@ function LogDrawer({
                 {detail.data.log.errorType && detail.data.log.errorMessage ? ': ' : ''}
                 {detail.data.log.errorMessage}
               </p>
-              {detail.data.log.errorStack && (
-                <pre className="code stack">{detail.data.log.errorStack}</pre>
-              )}
+              {detail.data.log.errorStack && <StackTrace stack={detail.data.log.errorStack} />}
             </>
           )}
           <h3>Attributes</h3>

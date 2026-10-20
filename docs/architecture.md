@@ -75,6 +75,31 @@ their primary key `(project_id, time, id)`, newest first with keyset paging.
 Housekeeping runs at boot and every 15 minutes: next day's partition,
 retention, expired sessions. With several server processes, one does it.
 
+## Issues
+
+Every log event at error level or above belongs to an issue. The grouping
+(`packages/shared/src/grouping.ts`) is, with a stack trace: service, error
+type and the top five frames of the app's own code (node_modules and the
+runtime left out), without line or column numbers and with paths cut to their
+last two segments, so redeploying moved or relocated code does not split an
+issue. Without a stack: service, type and the message with numbers, ids,
+emails and addresses masked. The key is stored readable, and the issue page
+shows it.
+
+Ingest assigns issues in the same transaction as the events: it locks the
+batch's existing issues in fingerprint order, inserts only groups never seen
+before (so issue numbers stay dense), and then updates counts, first and last
+seen and hourly counts from the rows actually inserted. A resolved issue whose
+new occurrence is newer than its resolution reopens and is marked regressed;
+a backfilled older event does not reopen it.
+
+`apiloupe-server reprocess-issues` regroups stored events after the rules
+change. An issue with unchanged grouping keeps its id and status; a new group
+inherits the status of the old issue most of its events came from. At boot,
+errors stored before issues existed are grouped the same way. Issues outlive
+their events: they are kept for four times the retention period after they
+were last seen, so a long-quiet issue that comes back is still a regression.
+
 ## Dashboard API and sign-in
 
 `/api/v1/*` is what the dashboard reads. Sessions are an HttpOnly,

@@ -6,6 +6,26 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-20
+
+### Added
+
+- Issues: every error and fatal log line grouped with the ones like it (same
+  service, error type and app stack frames, or the same masked message when
+  there is no stack). Issues list with trend lines and resolve / ignore /
+  reopen; issue page with the latest stack trace (your own frames
+  highlighted), recent occurrences with the requests they hit, the routes
+  affected, and why the events were grouped.
+- Regressions: a resolved issue that happens again reopens and is marked.
+- Top issues on the overview; links from error log lines to their issue.
+- `apiloupe-server reprocess-issues` regroups stored errors.
+
+### Upgrading
+
+- Errors stored by 0.1 or 0.2 are grouped into issues automatically when
+  0.3 starts (the server log says so per project). Ingest of errors pauses
+  while that runs.
+
 ## [0.2.0] - 2026-10-20
 
 ### Added
