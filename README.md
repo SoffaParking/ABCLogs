@@ -1,37 +1,33 @@
 # apiloupe
 
 **Self-hosted dashboard for your API's requests and errors.** See request
-volume, latency and status codes, slice everything by severity with a single
-"show this level and above" control, and follow any failed request to the log
-lines and stack trace it produced.
+volume, latency and status codes, slice everything by severity with one
+"show this level and above" control, follow a failed request to the log lines
+and stack trace it produced, and get identical errors folded into issues you
+can resolve.
 
-> **Status: 0.4 (milestone M4).** Ingest, the dashboard, grouped errors,
-> sign-in, the Node.js SDK and the importer (files, pipes and AWS CloudWatch
-> Logs) work. Live tail and 1.0 are next; see the [roadmap](#roadmap).
-
-## What it does
+![The overview: requests, error rates, latency and events by severity](docs/screenshots/overview.png)
 
 - **Overview:** requests per minute, 4xx and 5xx rates, p50 / p95 / p99
-  latency, requests by status over time, and the busiest routes with their
-  error rates and latency.
-- **Severity breakdown:** every event counted by level (trace → fatal), with a
-  verbosity control that hides everything below the level you pick, for
-  requests, logs, or both.
-- **Requests:** filter by method, route, status, level, duration, path or
-  request id; open one to see every log line written while serving it.
-- **Logs:** filter by minimum level, search messages and errors, see the stack
-  trace and the request behind each error.
-- **Issues:** every error folded into an issue with the others like it (same
-  error type, same place in your code), with a trend line, first and last
-  seen, the routes it hits, and resolve / ignore. A resolved issue that comes
-  back reopens as a regression.
-- **Sign-in:** email and password accounts, admins and members, invite links.
-- **Your logs as they are:** an importer that reads the JSON logs you already
-  write (pino, pino-http, bunyan and most JSON loggers), from files or a pipe.
-  Importing the same lines twice stores them once.
-- **Privacy by default:** request bodies, query strings, headers and IPs are
-  dropped unless you ask for them, and passwords, tokens and card numbers are
-  masked before anything is stored.
+  latency, requests by status over time, and the busiest routes.
+- **Severity:** every event counted by level (trace → fatal), with a verbosity
+  control that hides everything below the level you pick.
+- **Issues:** every error grouped with the ones like it (same error, same
+  place in your code), with a trend line, the routes it hits, and resolve /
+  ignore. A resolved issue that comes back reopens as a regression.
+- **Requests and logs:** filter and search both, open a request to see every
+  log line written while serving it, open an error to see its stack trace with
+  your own code highlighted, or watch new lines arrive with **live tail**.
+- **Three ways in:** a Node.js SDK (Express middleware and a pino stream), an
+  importer for the JSON logs you already have (files, pipes, AWS CloudWatch
+  Logs), and a plain HTTP API.
+- **Self-hosted and private by default:** one container and Postgres. Request
+  bodies, query strings, headers and IPs are dropped unless you ask for them,
+  and passwords, tokens and card numbers are masked before anything is stored.
+
+| Issues                                 | An issue                                                     | A failed request and its logs                                |
+| -------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| ![Issues](docs/screenshots/issues.png) | ![An issue with its stack trace](docs/screenshots/issue.png) | ![A request and its log lines](docs/screenshots/request.png) |
 
 ## Quick start
 
@@ -44,30 +40,26 @@ docker compose up -d
 docker compose logs app | grep 'setup code'
 ```
 
-The app prints the setup code a few seconds after it starts, so if the `grep`
-finds nothing, wait a moment and run it again.
-
-Open <http://localhost:8080>, enter the setup code from the log, and create the
-first admin. Then create a project and an ingest key (the dashboard walks you
-through it).
-
-To see the dashboard with data straight away, send two hours of synthetic
-traffic:
+Open <http://localhost:8080>, enter the setup code from the log and create the
+first admin, then a project and an ingest key (the dashboard walks you
+through it). To see it with data straight away:
 
 ```sh
-docker compose exec app apiloupe-import --demo 120 --key alk_...
+docker compose exec app apiloupe-import --demo 360 --key alk_...
 ```
 
-Before running it anywhere but your own machine, change `POSTGRES_PASSWORD`
-(and `DATABASE_URL` to match) in `docker-compose.yml`, put it behind a TLS
-proxy, and set `PUBLIC_URL` to the https address people will use.
-[deploy/ec2](deploy/ec2) does all of that on one small AWS server with a
-single command, HTTPS and nightly backups included.
+**On a server:** [deploy/ec2](deploy/ec2) launches apiloupe on a small AWS
+instance with one command, HTTPS and nightly backups included. Anywhere else,
+run the image `ghcr.io/emaalouf/apiloupe` behind a TLS proxy, with
+`DATABASE_URL` pointing at Postgres 15 or newer and `PUBLIC_URL` set to its
+https address.
 
 ## Sending data
 
-**From a Node.js app**, with [`@apiloupe/node`](packages/sdk-node) (no
-dependencies; CommonJS and ESM):
+### From a Node.js app
+
+[`@apiloupe/node`](packages/sdk-node) has no dependencies and works with
+CommonJS and ESM:
 
 ```js
 const { createApiloupe } = require('@apiloupe/node');
@@ -86,12 +78,17 @@ const logger = pino(
 );
 ```
 
-It never throws into your app, costs microseconds per request, keeps its queue
-bounded when apiloupe is down, and does nothing until both settings are
-present. [examples/express-pino](examples/express-pino) is a complete app.
+It never throws into your app, costs microseconds per request, keeps its
+queue bounded when apiloupe is down, and does nothing until both settings are
+present. For busy apps, `sampleRate: 0.1` sends a tenth of the successful
+requests and routine logs (never errors or warnings) and the dashboard scales
+the counts back up. [examples/express-pino](examples/express-pino) is a
+complete app.
 
-**Existing log files.** `apiloupe-import` reads JSON log lines from files
-(gzipped or not) or standard input:
+### Existing logs
+
+`apiloupe-import` reads JSON log lines (pino, pino-http, bunyan and most JSON
+loggers) from files, gzipped or not, or from standard input:
 
 ```sh
 apiloupe-import --endpoint https://apiloupe.example.com --key alk_... app.log app.log.1.gz
@@ -99,26 +96,22 @@ kubectl logs deploy/api | apiloupe-import --key alk_...
 ```
 
 A line with a method, a path and a status code becomes a **request**; any
-other line becomes a **log** event, with its error and stack trace when it has
-one. Lines that are not JSON are skipped unless you pass `--plain-text`.
-`--dry-run` shows what would be sent. Inside the Docker image the importer is
-already installed; from a clone, run `pnpm import-logs …`.
+other line a **log** event, with its error and stack trace. Importing the same
+lines twice stores them once, and lines the SDK already shipped live are the
+same events. `--dry-run` shows what would be sent. The Docker image includes
+the importer; from a clone, run `pnpm import-logs …`.
 
-**From AWS CloudWatch Logs**, with the same credentials as the `aws` CLI:
+### From AWS CloudWatch Logs
 
 ```sh
 apiloupe-import --key alk_... --cloudwatch --log-group /ecs/my-api \
   --stream-prefix api --region eu-central-1 --since 14d
 ```
 
-It reads in one-hour windows and saves its place in a checkpoint file after
-each window apiloupe has fully accepted. An interrupted import picks up where
-it stopped, and running it again later imports only what is new. `--follow`
-keeps it running, importing new logs every 30 seconds. Lines the SDK already
-shipped live are the same events (same ids), so backfilling a period that was
-also shipped live adds nothing twice.
-
-The credentials need `logs:FilterLogEvents` on the log group:
+It uses the same credentials as the `aws` CLI, reads in one-hour windows and
+saves its place after each window apiloupe has accepted, so an interrupted
+import resumes where it stopped. `--follow` keeps importing new logs. The
+credentials need `logs:FilterLogEvents` on the log group:
 
 ```json
 {
@@ -133,12 +126,9 @@ The credentials need `logs:FilterLogEvents` on the log group:
 }
 ```
 
-Reading CloudWatch Logs through this API costs nothing beyond data transfer
-when run outside AWS. Inside Docker on EC2, an instance role is only reachable
-from containers when the instance's metadata hop limit is 2 or more.
+### Anything else
 
-**Anything else** can post events directly. See the
-[ingest API](docs/ingest-api.md):
+Post events to the [ingest API](docs/ingest-api.md):
 
 ```sh
 curl -X POST https://apiloupe.example.com/ingest/v1/events \
@@ -163,20 +153,27 @@ curl -X POST https://apiloupe.example.com/ingest/v1/events \
 | `LOG_LEVEL`                | `info`     | The server's own log level.                                               |
 | `PUBLIC_DIR`               | `./public` | Where the built dashboard is served from (set by the Docker image).       |
 
-## Accounts
+## Accounts and security
 
-The first admin is created in the browser with the setup code. After that,
-admins invite people from **Settings → Users**: apiloupe makes a one-time link
-for you to pass on (it sends no email). Members can see every project; admins
-can also manage projects, keys and users.
-
-From the command line (`docker compose exec -T app …` in Docker):
+The first admin is created in the browser with the setup code from the server
+log, so whoever reaches a fresh server first cannot claim it. Admins invite
+people from **Settings → Users** with a one-time link (apiloupe sends no
+email). Members see every project and can resolve and ignore issues; admins
+also manage projects, keys and users.
 
 ```sh
 echo 'a long password' | apiloupe-server create-admin --email you@example.com
 echo 'a new password'  | apiloupe-server reset-password --email you@example.com
 apiloupe-server reprocess-issues            # regroup stored errors into issues
 ```
+
+Passwords are hashed with scrypt; sessions are HttpOnly, SameSite=Strict
+cookies, and state changes also need a same-origin `Origin` header. Sign-in is
+rate-limited per address and per email. Ingest keys and session tokens are
+stored only as SHA-256 hashes. The dashboard runs under a strict content
+security policy (nothing from other origins, no inline scripts or styles), and
+the browser tests fail on any violation. Report vulnerabilities as described
+in [SECURITY.md](SECURITY.md).
 
 ## Development
 
@@ -190,35 +187,22 @@ pnpm db:up          # Postgres in Docker, on localhost:5433
 pnpm dev            # server on :8080, dashboard on :5173
 pnpm demo --key alk_...
 pnpm lint && pnpm typecheck && pnpm test
+pnpm build && pnpm test:e2e    # browser tests (Playwright)
 ```
 
-The database tests need `TEST_DATABASE_URL` (see `.env.example`); without it
-they are skipped.
+| Package             | Contents                                                       |
+| ------------------- | -------------------------------------------------------------- |
+| `packages/shared`   | Event format, levels, log lines, grouping, sampling, redaction |
+| `packages/server`   | Ingest API, dashboard API, accounts, and host for the built UI |
+| `packages/ui`       | The dashboard (React + Vite)                                   |
+| `packages/importer` | `apiloupe-import`: files, pipes and CloudWatch Logs            |
+| `packages/sdk-node` | `@apiloupe/node`: Express middleware and pino stream           |
+| `e2e`               | Browser tests and the README's screenshots                     |
+| `examples/*`        | Small apps wired to apiloupe                                   |
+| `deploy/ec2`        | One-command deployment on AWS                                  |
 
-| Package             | Contents                                                             |
-| ------------------- | -------------------------------------------------------------------- |
-| `packages/shared`   | Event format, levels, log-line mapping, redaction, latency histogram |
-| `packages/server`   | Ingest API, dashboard API, accounts, and host for the built UI       |
-| `packages/ui`       | The dashboard (React + Vite)                                         |
-| `packages/importer` | `apiloupe-import`                                                    |
-
-See [docs/architecture.md](docs/architecture.md) for how the pieces fit.
-
-## Roadmap
-
-| Milestone | Scope                                                                                 | Status |
-| --------- | ------------------------------------------------------------------------------------- | ------ |
-| M0        | Repository, tooling, CI, Docker image, health checks                                  | done   |
-| M1        | Ingest API, overview with severity filter, requests and logs pages, importer, sign-in | done   |
-| M2        | Node.js SDK: Express middleware and pino destination                                  | done   |
-| M3        | Grouped errors: issues, resolve and ignore, regressions, trends                       | done   |
-| M4        | AWS CloudWatch import with resume                                                     | done   |
-| M5        | Live tail, sampling, end-to-end browser tests, 1.0                                    |        |
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md). Please report security issues as
-described in [SECURITY.md](SECURITY.md), not in public issues.
+[docs/architecture.md](docs/architecture.md) explains how the pieces fit;
+[CONTRIBUTING.md](CONTRIBUTING.md) how to work on them.
 
 ## License
 

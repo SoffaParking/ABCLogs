@@ -115,6 +115,20 @@ errors stored before issues existed are grouped the same way. Issues outlive
 their events: they are kept for four times the retention period after they
 were last seen, so a long-quiet issue that comes back is still a regression.
 
+## Live tail and sampling
+
+The live tail polls `GET …/logs/tail` every two seconds with a cursor on
+`received_at` (the time apiloupe stored the line), over the last day's
+partitions. Rows of one batch share their transaction's start time, and
+batches can commit out of order, so each poll re-reads ten seconds before its
+cursor and the browser drops lines it has already shown.
+
+A sampled event carries the `sampleRate` its sender used; the server stores
+`weight = round(1 / rate)` with it and every count (rollups, histograms,
+levels, issues) adds the weight. Senders choose by event id
+(`packages/shared/src/sampling.ts`), so the same line is kept or dropped
+alike by the SDK and by an import at the same rate.
+
 ## Dashboard API and sign-in
 
 `/api/v1/*` is what the dashboard reads. Sessions are an HttpOnly,

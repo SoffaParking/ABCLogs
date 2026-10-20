@@ -6,6 +6,33 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-20
+
+### Added
+
+- **Live tail:** new log lines appear on the Logs page as they arrive, with
+  the page's filters, pause and clear.
+- **Sampling:** `sampleRate` in `@apiloupe/node` and `--sample-rate` in the
+  importer send a share of successful requests and routine logs (never
+  errors, warnings or failed requests); the server counts each sampled event
+  as 1/rate everywhere, so totals, latency, severity and issues stay right.
+  The choice depends only on the event's id, so live shipping and a backfill
+  at the same rate keep the same lines and nothing is counted twice. Sampled
+  events show what they stand for (×10).
+- **Browser tests** (Playwright): first-run setup and every page, driven in
+  Chromium in CI. Any console error or content security policy violation
+  fails the run.
+- **Release images:** each version tag publishes `ghcr.io/emaalouf/apiloupe`
+  for amd64 and arm64, and `@apiloupe/node` to npm when a token is set.
+- The server reports its version (`/api/v1/meta`, Settings).
+- Screenshots in the README, generated from the demo data by the browser
+  tests.
+
+### Upgrading
+
+- Migration 003 adds an index and a `weight` column to the event tables;
+  it runs by itself at start-up.
+
 ## [0.4.1] - 2026-10-20
 
 ### Added

@@ -21,6 +21,13 @@ run when `TEST_DATABASE_URL` points at a Postgres user allowed to create
 databases (the one from `pnpm db:up` is), and are skipped otherwise. CI always
 runs them.
 
+The browser tests (`pnpm build && pnpm test:e2e`) start the built server on a
+fresh database and drive every page in Chromium; run
+`pnpm --filter @apiloupe/e2e exec playwright install chromium` once first, or
+set `PW_CHANNEL=chrome` to use your installed Chrome. They fail on any console
+error or content security policy violation.
+`pnpm --filter @apiloupe/e2e screenshots` regenerates the README's images.
+
 ## Before opening a pull request
 
 ```sh
