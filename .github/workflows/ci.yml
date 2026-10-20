@@ -17,6 +17,18 @@ jobs:
     name: Lint, typecheck, test, build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 3s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres:test@127.0.0.1:5432/postgres
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -31,8 +43,39 @@ jobs:
       - run: pnpm test
       - run: pnpm build
 
+  postgres-versions:
+    name: Database tests on Postgres ${{ matrix.postgres }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest supported and the newest.
+        postgres: ['15', '18']
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}-alpine
+        env:
+          POSTGRES_PASSWORD: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s
+          --health-timeout 3s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres:test@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @apiloupe/server test
+
   docker:
-    name: Docker image boots against Postgres
+    name: Docker image, end to end
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -61,6 +104,7 @@ jobs:
         run: |
           docker run -d --name apiloupe --network host \
             -e DATABASE_URL=postgres://apiloupe:apiloupe@127.0.0.1:5432/apiloupe \
+            -e SETUP_CODE=CI-SETUP-CODE \
             apiloupe:ci
           for i in $(seq 1 30); do
             if curl -sf http://127.0.0.1:8080/readyz; then echo; exit 0; fi
@@ -72,3 +116,20 @@ jobs:
         run: |
           curl -sf http://127.0.0.1:8080/ | grep -q '<title>apiloupe</title>'
           curl -sI http://127.0.0.1:8080/ | grep -qi "content-security-policy: default-src 'self'"
+      - name: Set up, import demo traffic with the bundled importer, read it back
+        run: |
+          set -euo pipefail
+          api=http://127.0.0.1:8080/api/v1
+          jar=$(mktemp)
+          post() { curl -sf -b "$jar" -c "$jar" -H 'content-type: application/json' -H 'origin: http://127.0.0.1:8080' -d "$2" "$api$1"; }
+          post /auth/setup '{"code":"CI-SETUP-CODE","email":"ci@example.com","password":"a long ci password"}' > /dev/null
+          slug=$(post /projects '{"name":"CI"}' | jq -r .project.slug)
+          key=$(post "/projects/$slug/keys" '{"name":"ci"}' | jq -r .key)
+          docker exec apiloupe apiloupe-import --demo 30 --endpoint http://127.0.0.1:8080 --key "$key"
+          requests=$(curl -sf -b "$jar" "$api/projects/$slug/overview" | jq .totals.requests)
+          echo "requests in the last hour: $requests"
+          test "$requests" -gt 0
+          echo 'a long ci password' | docker exec -i apiloupe apiloupe-server reset-password --email ci@example.com
+      - name: Server log on failure
+        if: failure()
+        run: docker logs apiloupe

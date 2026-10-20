@@ -8,12 +8,18 @@ use case are as valuable as code.
 ```sh
 corepack enable
 pnpm install
+cp .env.example .env
 pnpm db:up
 pnpm dev
 ```
 
 Node.js 22 or newer is required. Corepack picks the pinned pnpm version from
 `package.json`.
+
+The server's database tests create a throwaway database per test file. They
+run when `TEST_DATABASE_URL` points at a Postgres user allowed to create
+databases (the one from `pnpm db:up` is), and are skipped otherwise. CI always
+runs them.
 
 ## Before opening a pull request
 
