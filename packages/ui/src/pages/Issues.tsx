@@ -169,7 +169,7 @@ export function IssuesPage({ slug }: { slug: string }) {
           ]}
         />
       </div>
-      <Card>
+      <Card className={list.isPlaceholderData ? 'stale' : ''}>
         {list.isPending ? (
           <Spinner />
         ) : list.isError ? (

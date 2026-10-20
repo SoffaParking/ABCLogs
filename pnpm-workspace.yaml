@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - examples/*
+  - e2e
 
 # `pnpm deploy` (used by the Dockerfile) copies workspace dependencies into the
 # deployed folder instead of symlinking them, so the server image is

@@ -141,6 +141,8 @@ export interface RequestItem {
   status: number;
   durationMs: number | null;
   requestId: string | null;
+  /** Set on a sampled event: how many it stands for. */
+  weight?: number;
   attrs?: unknown;
 }
 
@@ -157,6 +159,7 @@ export interface LogItem {
   errorStack?: string | null;
   attrs?: unknown;
   issueId?: number | null;
+  weight?: number;
 }
 
 export interface Page<T> {

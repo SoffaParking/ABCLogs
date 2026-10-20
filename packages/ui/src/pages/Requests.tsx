@@ -19,7 +19,7 @@ import {
 import { formatDuration, formatEventTime, formatFullTime } from '../format';
 import { useQueryState } from '../hooks';
 import { rangeParams } from '../range';
-import { LogList } from './Logs';
+import { LogList, SampledBadge } from './Logs';
 import { ServiceFilter } from './Overview';
 
 const FILTER_KEYS = [
@@ -155,7 +155,7 @@ export function RequestsPage({ slug }: { slug: string }) {
         )}
       </div>
 
-      <Card>
+      <Card className={list.isPlaceholderData ? 'stale' : ''}>
         {list.isPending ? (
           <Spinner />
         ) : list.isError ? (
@@ -181,7 +181,10 @@ export function RequestsPage({ slug }: { slug: string }) {
                     className={`clickable ${open === r.ref ? 'selected' : ''}`}
                     onClick={() => patch({ open: r.ref })}
                   >
-                    <td className="nowrap muted">{formatEventTime(r.time)}</td>
+                    <td className="nowrap muted">
+                      {formatEventTime(r.time)}
+                      {r.weight && <SampledBadge weight={r.weight} />}
+                    </td>
                     <td className="wide">
                       <span className="method">{r.method}</span>{' '}
                       <code title={r.route}>{r.path}</code>

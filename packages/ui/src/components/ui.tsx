@@ -23,7 +23,10 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={`card ${className ?? ''}`}>
+    <section
+      className={`card ${className ?? ''}`}
+      aria-busy={className?.includes('stale') || undefined}
+    >
       {(title || actions) && (
         <header className="card-header">
           {title && <h2>{title}</h2>}

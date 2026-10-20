@@ -1,5 +1,6 @@
 import { LEVEL_NAMES, type LevelName } from '@apiloupe/shared';
 import { keepPreviousData, useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { api, type LogItem, type Page, type RequestItem } from '../api';
 import { SearchBox } from '../components/filters';
@@ -76,6 +77,7 @@ export function LogsPage({ slug }: { slug: string }) {
   const requestId = params.get('requestId') ?? '';
   const errorsOnly = params.get('errorsOnly') === 'true';
   const open = params.get('open');
+  const live = params.get('live') === '1';
 
   const list = useInfiniteQuery({
     queryKey: ['logs', slug, range, service, minLevel, q, requestId, errorsOnly],
@@ -93,6 +95,7 @@ export function LogsPage({ slug }: { slug: string }) {
     getNextPageParam: (last) => last.nextCursor ?? undefined,
     refetchInterval,
     placeholderData: keepPreviousData,
+    enabled: !live,
   });
   const items = list.data?.pages.flatMap((p) => p.items) ?? [];
 
@@ -134,86 +137,55 @@ export function LogsPage({ slug }: { slug: string }) {
           />
           With an error only
         </label>
+        <button
+          type="button"
+          className={`button small ${live ? 'on' : ''}`}
+          aria-pressed={live}
+          title="Show new log lines as they arrive"
+          onClick={() => patch({ live: live ? null : '1' })}
+        >
+          {live ? '■ Stop live tail' : '▶ Live tail'}
+        </button>
       </div>
 
-      <Card>
-        {list.isPending ? (
-          <Spinner />
-        ) : list.isError ? (
-          <ErrorNote error={list.error} />
-        ) : items.length === 0 ? (
-          <Empty>No log lines at {minLevel} or above match in this time range.</Empty>
-        ) : (
-          <div className="table-wrap">
-            <table className="table stack-mobile">
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Level</th>
-                  <th>Message</th>
-                  <th>Request</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((log) => (
-                  <tr
-                    key={log.ref}
-                    className={`clickable ${open === log.ref ? 'selected' : ''}`}
-                    onClick={() => patch({ open: log.ref })}
-                  >
-                    <td className="nowrap muted">{formatEventTime(log.time)}</td>
-                    <td>
-                      <LevelBadge level={log.level} />
-                    </td>
-                    <td className="wide">
-                      <div className="log-message">
-                        {log.message || <span className="muted">(no message)</span>}
-                        {log.errorMessage && log.errorMessage !== log.message && (
-                          <span className="log-error">
-                            {log.errorType ? `${log.errorType}: ` : ''}
-                            {log.errorMessage}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      {log.requestId ? (
-                        <button
-                          type="button"
-                          className="link small"
-                          title="Show every log line of this request"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            patch({ requestId: log.requestId, minLevel: 'trace', q: null });
-                          }}
-                        >
-                          {log.requestId.length > 14
-                            ? `${log.requestId.slice(0, 14)}…`
-                            : log.requestId}
-                        </button>
-                      ) : (
-                        <span className="muted">–</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {list.hasNextPage && (
-          <div className="more">
-            <button
-              type="button"
-              className="button"
-              disabled={list.isFetchingNextPage}
-              onClick={() => void list.fetchNextPage()}
-            >
-              {list.isFetchingNextPage ? 'Loading…' : 'Load more'}
-            </button>
-          </div>
-        )}
-      </Card>
+      {live ? (
+        <LiveTail
+          slug={slug}
+          filters={{ service, minLevel, q, requestId, errorsOnly: errorsOnly || undefined }}
+          open={open}
+          onOpen={(ref) => patch({ open: ref })}
+          onRequest={(id) => patch({ requestId: id, minLevel: 'trace', q: null })}
+        />
+      ) : (
+        <Card className={list.isPlaceholderData ? 'stale' : ''}>
+          {list.isPending ? (
+            <Spinner />
+          ) : list.isError ? (
+            <ErrorNote error={list.error} />
+          ) : items.length === 0 ? (
+            <Empty>No log lines at {minLevel} or above match in this time range.</Empty>
+          ) : (
+            <LogTable
+              items={items}
+              open={open}
+              onOpen={(ref) => patch({ open: ref })}
+              onRequest={(id) => patch({ requestId: id, minLevel: 'trace', q: null })}
+            />
+          )}
+          {list.hasNextPage && (
+            <div className="more">
+              <button
+                type="button"
+                className="button"
+                disabled={list.isFetchingNextPage}
+                onClick={() => void list.fetchNextPage()}
+              >
+                {list.isFetchingNextPage ? 'Loading…' : 'Load more'}
+              </button>
+            </div>
+          )}
+        </Card>
+      )}
 
       {open && (
         <LogDrawer
@@ -224,6 +196,203 @@ export function LogsPage({ slug }: { slug: string }) {
         />
       )}
     </div>
+  );
+}
+
+/** The log table, shared by the paged list and the live tail. */
+function LogTable({
+  items,
+  open,
+  onOpen,
+  onRequest,
+}: {
+  items: LogItem[];
+  open: string | null;
+  onOpen: (ref: string) => void;
+  onRequest: (requestId: string) => void;
+}) {
+  return (
+    <div className="table-wrap">
+      <table className="table stack-mobile">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Level</th>
+            <th>Message</th>
+            <th>Request</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((log) => (
+            <tr
+              key={log.ref}
+              className={`clickable ${open === log.ref ? 'selected' : ''}`}
+              onClick={() => onOpen(log.ref)}
+            >
+              <td className="nowrap muted">
+                {formatEventTime(log.time)}
+                {log.weight && <SampledBadge weight={log.weight} />}
+              </td>
+              <td>
+                <LevelBadge level={log.level} />
+              </td>
+              <td className="wide">
+                <div className="log-message">
+                  {log.message || <span className="muted">(no message)</span>}
+                  {log.errorMessage && log.errorMessage !== log.message && (
+                    <span className="log-error">
+                      {log.errorType ? `${log.errorType}: ` : ''}
+                      {log.errorMessage}
+                    </span>
+                  )}
+                </div>
+              </td>
+              <td className="nowrap">
+                {log.requestId ? (
+                  <button
+                    type="button"
+                    className="link small"
+                    title="Show every log line of this request"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRequest(log.requestId!);
+                    }}
+                  >
+                    {log.requestId.length > 14 ? `${log.requestId.slice(0, 14)}…` : log.requestId}
+                  </button>
+                ) : (
+                  <span className="muted">–</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** A sampled event stands for several: say how many. */
+export function SampledBadge({ weight }: { weight: number }) {
+  return (
+    <span
+      className="sampled"
+      title={`Sampled: this event stands for ${weight} like it in the charts`}
+    >
+      {' '}
+      ×{weight}
+    </span>
+  );
+}
+
+const TAIL_EVERY_MS = 2000;
+const TAIL_KEEP = 500;
+
+interface TailFilters {
+  service: string;
+  minLevel: string;
+  q: string;
+  requestId: string;
+  errorsOnly: boolean | undefined;
+}
+
+/**
+ * New log lines as they arrive, newest at the top, in arrival order. Polls
+ * every two seconds from a cursor; the server re-sends a little overlap and
+ * lines already shown are dropped here.
+ */
+function LiveTail({
+  slug,
+  filters,
+  open,
+  onOpen,
+  onRequest,
+}: {
+  slug: string;
+  filters: TailFilters;
+  open: string | null;
+  onOpen: (ref: string) => void;
+  onRequest: (requestId: string) => void;
+}) {
+  const [items, setItems] = useState<LogItem[]>([]);
+  const [paused, setPaused] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const [polledAt, setPolledAt] = useState<number | null>(null);
+  const cursor = useRef<string | null>(null);
+  const seen = useRef(new Set<string>());
+  const filterKey = JSON.stringify(filters);
+
+  useEffect(() => {
+    // New filters: start over.
+    cursor.current = null;
+    seen.current = new Set();
+    setItems([]);
+  }, [slug, filterKey]);
+
+  useEffect(() => {
+    if (paused) return;
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const tick = async () => {
+      try {
+        const res = await api.get<{ items: LogItem[]; cursor: string }>(
+          `/projects/${slug}/logs/tail`,
+          {
+            ...(JSON.parse(filterKey) as TailFilters),
+            since: cursor.current,
+          },
+        );
+        if (stopped) return;
+        cursor.current = res.cursor;
+        const fresh = res.items.filter((item) => !seen.current.has(item.ref));
+        for (const item of fresh) seen.current.add(item.ref);
+        if (seen.current.size > TAIL_KEEP * 10)
+          seen.current = new Set([...seen.current].slice(-TAIL_KEEP * 2));
+        if (fresh.length > 0) setItems((prev) => [...fresh, ...prev].slice(0, TAIL_KEEP));
+        setError(null);
+        setPolledAt(Date.now());
+      } catch (err) {
+        if (!stopped) setError(err);
+      }
+      if (!stopped) timer = setTimeout(() => void tick(), TAIL_EVERY_MS);
+    };
+    void tick();
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [slug, filterKey, paused]);
+
+  return (
+    <Card
+      title={
+        <span className="tail-title">
+          <span className={paused ? 'tail-dot paused' : 'tail-dot'} aria-hidden="true" />
+          {paused ? 'Live tail paused' : 'Live tail'}
+        </span>
+      }
+      actions={
+        <>
+          <span className="muted small" aria-live="polite">
+            {items.length} lines
+            {polledAt ? ` · checked ${new Date(polledAt).toLocaleTimeString()}` : ''}
+          </span>
+          <button type="button" className="button small" onClick={() => setPaused(!paused)}>
+            {paused ? 'Resume' : 'Pause'}
+          </button>
+          <button type="button" className="button small" onClick={() => setItems([])}>
+            Clear
+          </button>
+        </>
+      }
+    >
+      <ErrorNote error={error} />
+      {items.length === 0 ? (
+        <Empty>Waiting for new log lines that match… they appear here as they arrive.</Empty>
+      ) : (
+        <LogTable items={items} open={open} onOpen={onOpen} onRequest={onRequest} />
+      )}
+    </Card>
   );
 }
 

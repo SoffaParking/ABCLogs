@@ -1,0 +1,19 @@
+{
+  "name": "@apiloupe/e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Browser tests: the built server and dashboard, driven through every page.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "node run.mjs",
+    "screenshots": "SCREENSHOTS=1 node run.mjs --grep @screenshots",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@apiloupe/importer": "workspace:*",
+    "@playwright/test": "1.63.0",
+    "pg": "8.23.1",
+    "@types/pg": "8.23.1"
+  }
+}
