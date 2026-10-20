@@ -18,7 +18,7 @@ function AuthLayout({
       <div className="auth-card">
         <div className="brand brand-large">
           <span className="brand-mark" aria-hidden="true" />
-          apiloupe
+          Soffa API Logs Dashboard
         </div>
         <h1>{title}</h1>
         {intro && <p className="muted">{intro}</p>}
@@ -175,7 +175,7 @@ export function InvitePage({ token }: { token: string }) {
   });
   if (invite.isPending) {
     return (
-      <AuthLayout title="Join apiloupe">
+      <AuthLayout title="Join Soffa API Logs Dashboard">
         <Spinner />
       </AuthLayout>
     );
@@ -194,7 +194,7 @@ export function InvitePage({ token }: { token: string }) {
   };
   return (
     <AuthLayout
-      title="Join apiloupe"
+      title="Join Soffa API Logs Dashboard"
       intro={
         <>
           You were invited as <strong>{invite.data.email}</strong> ({invite.data.role}).

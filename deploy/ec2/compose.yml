@@ -1,5 +1,5 @@
-# apiloupe on one server: the app, its Postgres, Caddy in front for HTTPS,
-# and a nightly database backup. Started by user-data.sh on first boot;
+# The Soffa API Logs Dashboard on one server: the app, its Postgres, Caddy in
+# front for HTTPS, and a nightly database backup. Started by user-data.sh on first boot;
 # settings come from /opt/apiloupe/deploy/ec2/.env (written there, never committed).
 name: apiloupe
 

@@ -1,7 +1,7 @@
 #!/bin/bash
-# Launches an apiloupe server on EC2: a security group (HTTP and HTTPS from
-# anywhere, SSH from your address only), an Ubuntu 24.04 arm64 instance that
-# sets itself up on first boot (user-data.sh), and an Elastic IP.
+# Launches a Soffa API Logs Dashboard server on EC2: a security group (HTTP
+# and HTTPS from anywhere, SSH from your address only), an Ubuntu 24.04 arm64
+# instance that sets itself up on first boot (user-data.sh), and an Elastic IP.
 #
 #   DOMAIN=apiloupe.example.com KEY_NAME=my-key ./deploy/ec2/launch.sh
 #
@@ -14,7 +14,7 @@ cd "$(dirname "$0")"
 REGION="${REGION:-eu-central-1}"
 DOMAIN="${DOMAIN:?set DOMAIN, e.g. apiloupe.example.com}"
 KEY_NAME="${KEY_NAME:?set KEY_NAME to an EC2 key pair in $REGION}"
-VERSION="${VERSION:-v1.0.0}"
+VERSION="${VERSION:-v1.1.0}"
 INSTANCE_TYPE="${INSTANCE_TYPE:-t4g.small}"
 NAME="${NAME:-apiloupe}"
 SSH_CIDR="${SSH_CIDR:-$(curl -s https://checkip.amazonaws.com)/32}"
@@ -28,7 +28,7 @@ sg=$(aws ec2 describe-security-groups --query 'SecurityGroups[0].GroupId' \
   --filters "Name=group-name,Values=$NAME" "Name=vpc-id,Values=$vpc")
 if [ "$sg" = "None" ]; then
   sg=$(aws ec2 create-security-group --group-name "$NAME" --vpc-id "$vpc" --query GroupId \
-    --description "apiloupe: HTTP and HTTPS from anywhere, SSH from one address")
+    --description "Soffa API Logs Dashboard: HTTP and HTTPS from anywhere, SSH from one address")
   aws ec2 authorize-security-group-ingress --group-id "$sg" --ip-permissions \
     "IpProtocol=tcp,FromPort=80,ToPort=80,IpRanges=[{CidrIp=0.0.0.0/0}],Ipv6Ranges=[{CidrIpv6=::/0}]" \
     "IpProtocol=tcp,FromPort=443,ToPort=443,IpRanges=[{CidrIp=0.0.0.0/0}],Ipv6Ranges=[{CidrIpv6=::/0}]" \
@@ -63,7 +63,7 @@ ip=$(aws ec2 describe-addresses --allocation-ids "$alloc" --query 'Addresses[0].
 
 cat <<DONE
 
-apiloupe server launched
+Soffa API Logs Dashboard server launched
   instance    $instance ($INSTANCE_TYPE, $REGION)
   address     $ip (Elastic IP $alloc)
   setup code  $setup_code

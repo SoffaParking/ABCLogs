@@ -6,6 +6,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-20
+
+### Changed
+
+- The project is now called **Soffa API Logs Dashboard**: the dashboard's
+  header and browser tab, the sign-in and setup pages, Settings, the server's
+  `/api/v1/meta` name, the SDK's warnings, the command-line help, the
+  deployment scripts' messages and the docs all use the new name.
+- Nothing technical changed name, so existing installs, integrations and
+  scripts keep working: the repository, the Docker image
+  (`ghcr.io/emaalouf/apiloupe`), the packages and commands (`@apiloupe/node`,
+  `apiloupe-import`, `apiloupe-server`), the `APILOUPE_*` settings, cookies
+  and the `alk_` ingest keys are unchanged.
+
 ## [1.0.0] - 2026-10-20
 
 ### Added

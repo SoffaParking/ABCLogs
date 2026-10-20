@@ -1,7 +1,8 @@
 # Ingest API
 
-Everything reaches apiloupe through one endpoint. The importer and (from M2)
-the Node SDK use it; so can anything that can make an HTTP request.
+Everything reaches the Soffa API Logs Dashboard through one endpoint. The
+importer and the Node SDK use it; so can anything that can make an HTTP
+request.
 
 ## Authentication
 

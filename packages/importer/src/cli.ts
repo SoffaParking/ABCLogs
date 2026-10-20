@@ -10,9 +10,10 @@ import { parseDuration, parseWhen, shortTime } from './time.js';
 const USAGE = `Usage: apiloupe-import [options] [file ...]
        apiloupe-import --cloudwatch --log-group <name> [options]
 
-Sends JSON log lines (pino, pino-http, bunyan and most JSON loggers) to an
-apiloupe server: from the files given (gzipped or not), standard input, or
-AWS CloudWatch Logs. Importing the same lines twice stores them once.
+Sends JSON log lines (pino, pino-http, bunyan and most JSON loggers) to a
+Soffa API Logs Dashboard server: from the files given (gzipped or not),
+standard input, or AWS CloudWatch Logs. Importing the same lines twice stores
+them once.
 
 Options:
   --endpoint <url>    apiloupe server (env APILOUPE_ENDPOINT, default http://localhost:8080)
@@ -43,7 +44,7 @@ CloudWatch Logs (uses the same credentials as the aws CLI):
   --aws-endpoint <url>    a different CloudWatch Logs endpoint (VPC endpoint, LocalStack)
 
   The checkpoint moves forward only after a whole hour of logs has been
-  accepted by apiloupe, so an interrupted import resumes where it stopped.
+  accepted by the server, so an interrupted import resumes where it stopped.
   The credentials need logs:FilterLogEvents on the log group.
 
 Examples:

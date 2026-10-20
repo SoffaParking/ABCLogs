@@ -1,4 +1,4 @@
-# Contributing to apiloupe
+# Contributing to the Soffa API Logs Dashboard
 
 Thanks for helping. This is a young project, so issues that describe a real
 use case are as valuable as code.

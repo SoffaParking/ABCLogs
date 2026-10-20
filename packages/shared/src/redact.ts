@@ -45,7 +45,7 @@ export function redact(value: unknown, depth = 0): unknown {
 }
 
 /**
- * Masks secrets that turn up inside free text, without shortening it: bearer tokens, apiloupe keys,
+ * Masks secrets that turn up inside free text, without shortening it: bearer tokens, ingest keys,
  * and card numbers (13 to 19 digits starting 3 to 6, passing the Luhn check;
  * the leading digit keeps epoch-millisecond timestamps, which start with 1,
  * from being mistaken for cards).

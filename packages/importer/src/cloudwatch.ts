@@ -68,10 +68,10 @@ const HOUR = 3_600_000;
 
 /**
  * Imports CloudWatch Logs window by window. After each window is fully
- * accepted by apiloupe the checkpoint moves to the window's end, so an
+ * accepted by the server the checkpoint moves to the window's end, so an
  * interrupted import resumes where it stopped and loses nothing. Windows are
  * read again a little before the checkpoint, which costs nothing: events
- * apiloupe already has come back as duplicates.
+ * the server already has come back as duplicates.
  */
 export async function runCloudWatchImport(
   source: LogSource,

@@ -1,6 +1,7 @@
-// A small Express API wired to apiloupe the way most Node apps would be:
-// the middleware records every request, pino's lines go to stdout as usual
-// and to apiloupe as well, and shutdown flushes what is still queued.
+// A small Express API wired to the Soffa API Logs Dashboard the way most Node
+// apps would be: the middleware records every request, pino's lines go to
+// stdout as usual and to the dashboard as well, and shutdown flushes what is
+// still queued.
 //
 //   APILOUPE_ENDPOINT=http://localhost:8080 APILOUPE_KEY=alk_... node index.js
 //
@@ -55,7 +56,7 @@ app.post('/checkout', (req, res) => {
   res.status(201).json({ ok: true });
 });
 
-// Errors are logged through pino, which apiloupe receives already. An app
+// Errors are logged through pino, which the dashboard receives already. An app
 // that does not log its errors would add `app.use(apiloupe.expressErrorHandler())`
 // here instead.
 app.use((err, req, res, _next) => {

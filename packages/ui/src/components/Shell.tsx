@@ -90,7 +90,7 @@ export function Shell({ user, children }: { user: User; children: ReactNode }) {
         <header className="topbar">
           <Link href="/" className="brand">
             <span className="brand-mark" aria-hidden="true" />
-            apiloupe
+            Soffa API Logs Dashboard
           </Link>
           {slug && projects.data && projects.data.projects.length > 0 && (
             <select

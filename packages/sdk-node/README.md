@@ -1,8 +1,8 @@
 # @apiloupe/node
 
 Send a Node.js API's requests, logs and errors to
-[apiloupe](https://github.com/emaalouf/apiloupe), the self-hosted request and
-error dashboard.
+the [Soffa API Logs Dashboard](https://github.com/emaalouf/apiloupe), the self-hosted
+request and error dashboard.
 
 - **Express middleware:** every request with its route, status and duration.
 - **pino stream:** every log line, alongside wherever your logs go now.
@@ -80,8 +80,8 @@ apiloupe.captureException(err, { requestId: req.id });
 - **It never throws into your code and never blocks a request.** Recording a
   request costs a few microseconds; serialising, compressing and sending
   happen later, in batches, in the background.
-- **Memory is bounded.** If apiloupe is slow or down, events wait in a queue
-  of `maxQueue` (10 000); past that the oldest are dropped and counted
+- **Memory is bounded.** If the dashboard is slow or down, events wait in a
+  queue of `maxQueue` (10 000); past that the oldest are dropped and counted
   (`apiloupe.stats()`).
 - **It does not hold your process open.** A script that finishes exits; the
   client makes one short attempt (2 s) to send what is queued first.

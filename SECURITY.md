@@ -1,7 +1,7 @@
 # Security policy
 
-apiloupe stores request metadata and error logs, which can contain sensitive
-information, so security reports are taken seriously.
+The Soffa API Logs Dashboard stores request metadata and error logs, which can
+contain sensitive information, so security reports are taken seriously.
 
 ## Reporting a vulnerability
 

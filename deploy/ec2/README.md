@@ -1,7 +1,7 @@
-# apiloupe on a single EC2 server
+# The Soffa API Logs Dashboard on a single EC2 server
 
-One small instance running everything with Docker Compose: apiloupe,
-Postgres, [Caddy](https://caddyserver.com) for HTTPS (certificates from
+One small instance running everything with Docker Compose: the
+dashboard, Postgres, [Caddy](https://caddyserver.com) for HTTPS (certificates from
 Let's Encrypt, renewed by themselves), and a nightly database backup.
 
 |            |                                                                                               |
@@ -25,7 +25,7 @@ address and a setup code. Then:
 
 1. Add a DNS **A record** for your domain pointing at the address.
 2. Wait about ten minutes while the server installs Docker and builds
-   apiloupe (`ssh ubuntu@<address> tail -f /var/log/apiloupe-setup.log`).
+   the dashboard (`ssh ubuntu@<address> tail -f /var/log/apiloupe-setup.log`).
 3. Open `https://<your domain>`, enter the setup code and create the first
    admin.
 
@@ -42,7 +42,7 @@ sudo docker compose ps                     # what is running
 sudo docker compose logs -f app            # the server's log
 sudo docker compose exec app apiloupe-server reset-password --email you@example.com
 sudo docker compose exec app apiloupe-import --cloudwatch --log-group /ecs/my-api --since 14d --key alk_...
-sudo /opt/apiloupe/deploy/ec2/upgrade.sh v1.0.0   # move to another release
+sudo /opt/apiloupe/deploy/ec2/upgrade.sh v1.1.0   # move to another release
 ```
 
 The settings are in `/opt/apiloupe/deploy/ec2/.env`, written on first boot:

@@ -12,7 +12,7 @@ import { eventIdForLine } from '@apiloupe/shared/node';
 const gzip = promisify(gzipCb);
 
 export interface ImportOptions {
-  /** The apiloupe server, e.g. `http://localhost:8080`. */
+  /** The Soffa API Logs Dashboard server, e.g. `http://localhost:8080`. */
   endpoint: string;
   /** The project's ingest key. Not needed for a dry run. */
   key?: string | undefined;
@@ -205,7 +205,7 @@ async function request(url: string, init: RequestInit, options: ImportOptions): 
   const headers = {
     ...(init.headers as Record<string, string> | undefined),
     authorization: `Bearer ${options.key ?? ''}`,
-    'user-agent': options.userAgent ?? 'apiloupe-import/1.0.0',
+    'user-agent': options.userAgent ?? 'apiloupe-import/1.1.0',
   };
   for (let attempt = 1; ; attempt++) {
     let wait: number;

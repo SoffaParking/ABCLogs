@@ -30,7 +30,7 @@ import { post } from './transport.js';
 
 const gzip = promisify(gzipCallback);
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 
 /** A queued item: a ready event, or a raw log line mapped only when sent (off the hot path). */
 type Item = { event: EventInput } | { line: string; stream: StreamConfig };
@@ -301,8 +301,10 @@ export class Client implements Apiloupe {
     this.#retryAt = Date.now() + wait;
     this.#report(
       result.ok
-        ? new Error(`apiloupe answered ${result.status}; retrying in ${Math.round(wait / 1000)} s`)
-        : new Error(`could not reach apiloupe: ${result.error.message}`),
+        ? new Error(
+            `the Soffa API Logs Dashboard answered ${result.status}; retrying in ${Math.round(wait / 1000)} s`,
+          )
+        : new Error(`could not reach the Soffa API Logs Dashboard: ${result.error.message}`),
     );
     return false;
   }
@@ -356,7 +358,7 @@ export class Client implements Apiloupe {
       if (now - this.#lastWarnAt < WARN_EVERY_MS) return;
       this.#lastWarnAt = now;
       console.warn(
-        `[apiloupe] ${error.message} (queued ${this.#backlog()}, dropped ${this.#stats.dropped})`,
+        `[Soffa API Logs] ${error.message} (queued ${this.#backlog()}, dropped ${this.#stats.dropped})`,
       );
     } catch {
       // a broken onError must not break sending
@@ -381,7 +383,7 @@ function refusal(status: number, body: string): string {
     detail = '';
   }
   const what = status === 401 ? 'refused the ingest key' : `refused a batch (${status})`;
-  return `apiloupe ${what}${detail ? `: ${detail}` : ''}; those events were dropped`;
+  return `the Soffa API Logs Dashboard ${what}${detail ? `: ${detail}` : ''}; those events were dropped`;
 }
 
 /** `{type, message, stack}` from anything thrown. */

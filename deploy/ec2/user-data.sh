@@ -1,6 +1,7 @@
 #!/bin/bash
-# First-boot setup for an Ubuntu 24.04 server running apiloupe. launch.sh
-# fills in the three values below and passes this file as EC2 user data.
+# First-boot setup for an Ubuntu 24.04 server running the Soffa API Logs
+# Dashboard. launch.sh fills in the three values below and passes this file as
+# EC2 user data.
 # Progress: /var/log/apiloupe-setup.log on the server.
 set -euo pipefail
 exec > >(tee -a /var/log/apiloupe-setup.log) 2>&1
@@ -9,7 +10,7 @@ DOMAIN="__DOMAIN__"
 VERSION="__VERSION__"
 SETUP_CODE="__SETUP_CODE__"
 
-echo "apiloupe setup: $DOMAIN, $VERSION"
+echo "Soffa API Logs Dashboard setup: $DOMAIN, $VERSION"
 
 # Swap: building the image needs more than the 2 GB of a small instance.
 if [ ! -f /swapfile ]; then
@@ -39,4 +40,4 @@ ENV
 fi
 
 docker compose up -d --build
-echo "apiloupe setup: done. Open https://$DOMAIN once DNS points here."
+echo "Soffa API Logs Dashboard setup: done. Open https://$DOMAIN once DNS points here."
