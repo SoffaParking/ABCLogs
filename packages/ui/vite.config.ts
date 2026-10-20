@@ -1,10 +1,12 @@
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defaultClientConditions, defineConfig } from 'vite';
 
 // In development the dashboard runs on Vite's port and proxies the server's
 // routes, so the same relative URLs work in dev and in the built image.
+// Workspace packages are read from their TypeScript source (`source`).
 export default defineConfig({
   plugins: [react()],
+  resolve: { conditions: ['source', ...defaultClientConditions] },
   build: { outDir: 'dist', emptyOutDir: true },
   server: {
     port: 5173,

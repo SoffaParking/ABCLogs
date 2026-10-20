@@ -1,36 +1,93 @@
-import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { Redirect, Route, Switch, useLocation } from 'wouter';
+import { api, setUnauthorizedHandler, type AuthState } from './api';
+import { LAST_PROJECT_KEY, Shell, useProjects } from './components/Shell';
+import { ErrorNote, Spinner } from './components/ui';
+import { InvitePage, LoginPage, SetupPage } from './pages/Auth';
+import { LogsPage } from './pages/Logs';
+import { Onboarding } from './pages/Onboarding';
+import { OverviewPage } from './pages/Overview';
+import { RequestsPage } from './pages/Requests';
+import { SettingsPage } from './pages/Settings';
 
-interface Meta {
-  name: string;
-  levels: string[];
+function FullPage({ children }: { children: React.ReactNode }) {
+  return <main className="auth">{children}</main>;
 }
 
-type State = { kind: 'loading' } | { kind: 'ok'; meta: Meta } | { kind: 'error'; message: string };
+/** `/`: the last project you looked at, the first one, or onboarding when there are none. */
+function Home({ isAdmin }: { isAdmin: boolean }) {
+  const projects = useProjects();
+  if (projects.isPending) return <Spinner />;
+  if (projects.isError) return <ErrorNote error={projects.error} />;
+  const list = projects.data.projects;
+  if (list.length === 0) return <Onboarding isAdmin={isAdmin} />;
+  let last: string | null = null;
+  try {
+    last = localStorage.getItem(LAST_PROJECT_KEY);
+  } catch {
+    last = null;
+  }
+  const target = list.find((p) => p.slug === last) ?? list[0]!;
+  return <Redirect to={`/p/${target.slug}`} replace />;
+}
 
-/** Placeholder until the dashboard pages land in M1: proves the UI reaches the server. */
 export function App() {
-  const [state, setState] = useState<State>({ kind: 'loading' });
+  const qc = useQueryClient();
+  const [location] = useLocation();
+  const auth = useQuery({
+    queryKey: ['auth'],
+    queryFn: () => api.get<AuthState>('/auth/state'),
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
-    fetch('/api/v1/meta')
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        setState({ kind: 'ok', meta: (await res.json()) as Meta });
-      })
-      .catch((err: unknown) => {
-        setState({ kind: 'error', message: err instanceof Error ? err.message : String(err) });
-      });
-  }, []);
+    setUnauthorizedHandler(() => void qc.invalidateQueries({ queryKey: ['auth'] }));
+  }, [qc]);
+
+  const invite = /^\/invite\/([^/?]+)/.exec(location);
+  if (invite) return <InvitePage token={decodeURIComponent(invite[1]!)} />;
+
+  if (auth.isPending) {
+    return (
+      <FullPage>
+        <Spinner />
+      </FullPage>
+    );
+  }
+  if (auth.isError) {
+    return (
+      <FullPage>
+        <div className="auth-card">
+          <h1>Server unreachable</h1>
+          <ErrorNote error={auth.error} />
+          <button type="button" className="button" onClick={() => void auth.refetch()}>
+            Try again
+          </button>
+        </div>
+      </FullPage>
+    );
+  }
+  if (auth.data.setupRequired) return <SetupPage />;
+  const user = auth.data.user;
+  if (!user) return <LoginPage />;
 
   return (
-    <main className="placeholder">
-      <h1>apiloupe</h1>
-      <p>API requests and errors, by verbosity. The dashboard is under construction.</p>
-      {state.kind === 'loading' && <p className="muted">Connecting to the server…</p>}
-      {state.kind === 'error' && <p className="error">Server unreachable: {state.message}</p>}
-      {state.kind === 'ok' && (
-        <p className="muted">Server connected. Levels: {state.meta.levels.join(' · ')}</p>
-      )}
-    </main>
+    <Shell user={user}>
+      <Switch>
+        <Route path="/">{() => <Home isAdmin={user.role === 'admin'} />}</Route>
+        <Route path="/p/:slug">{(p) => <OverviewPage slug={p.slug} />}</Route>
+        <Route path="/p/:slug/requests">{(p) => <RequestsPage slug={p.slug} />}</Route>
+        <Route path="/p/:slug/logs">{(p) => <LogsPage slug={p.slug} />}</Route>
+        <Route path="/settings/:tab?/:item?">
+          {(p) => <SettingsPage user={user} tab={p.tab} item={p.item} />}
+        </Route>
+        <Route>
+          <div className="empty">
+            <h2>Page not found</h2>
+          </div>
+        </Route>
+      </Switch>
+    </Shell>
   );
 }
