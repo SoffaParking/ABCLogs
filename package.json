@@ -16,7 +16,9 @@
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
-    "db:up": "docker compose up -d db"
+    "db:up": "docker compose up -d db",
+    "import-logs": "tsx --conditions=source packages/importer/src/cli.ts",
+    "demo": "tsx --conditions=source packages/importer/src/cli.ts --demo"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -27,6 +29,7 @@
     "prettier": "3.9.10",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.2",
-    "vitest": "5.0.5"
+    "vitest": "5.0.5",
+    "tsx": "4.23.15"
   }
 }

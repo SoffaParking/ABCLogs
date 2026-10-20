@@ -8,11 +8,12 @@
   "main": "./dist/index.js",
   "files": [
     "dist",
+    "migrations",
     "public"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "dev": "tsx watch --conditions=source src/index.ts",
+    "dev": "tsx watch --conditions=source --env-file-if-exists=../../.env src/index.ts",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
@@ -26,6 +27,10 @@
   },
   "devDependencies": {
     "@types/pg": "8.23.1",
-    "tsx": "4.23.15"
+    "tsx": "4.23.15",
+    "@apiloupe/importer": "workspace:*"
+  },
+  "bin": {
+    "apiloupe-server": "./dist/cli.js"
   }
 }
