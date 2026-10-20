@@ -42,6 +42,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+      - name: Check the SDK package (formats, no dependencies, types)
+        run: pnpm --filter @apiloupe/node check:package
 
   postgres-versions:
     name: Database tests on Postgres ${{ matrix.postgres }}

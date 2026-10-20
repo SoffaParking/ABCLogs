@@ -291,6 +291,25 @@ function ProjectSettings({ slug, isAdmin }: { slug: string; isAdmin: boolean }) 
       )}
 
       <Card title="Send data">
+        <p>
+          From a Node.js app, with{' '}
+          <a
+            href="https://github.com/emaalouf/apiloupe/tree/main/packages/sdk-node"
+            target="_blank"
+            rel="noreferrer"
+          >
+            @apiloupe/node
+          </a>{' '}
+          (Express middleware and a pino stream):
+        </p>
+        <pre className="code">{`const { createApiloupe } = require('@apiloupe/node');
+const apiloupe = createApiloupe({ endpoint: '${origin}', key: '${shownKey}' });
+
+app.use(apiloupe.express());
+const logger = pino(opts, pino.multistream([
+  { stream: process.stdout },
+  { stream: apiloupe.pinoStream({ requests: false }) },
+]));`}</pre>
         <p>Import existing JSON logs (pino and most JSON loggers) from a file or a pipe:</p>
         <pre className="code">{`pnpm import-logs --endpoint ${origin} --key ${shownKey} app.log`}</pre>
         <p>Or post events from anywhere:</p>

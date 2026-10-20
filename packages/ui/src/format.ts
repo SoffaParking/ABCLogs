@@ -25,6 +25,7 @@ export function formatPercent(share: number): string {
 export function formatDuration(ms: number | null | undefined): string {
   if (ms === null || ms === undefined) return '–';
   if (ms < 1) return '<1 ms';
+  if (ms < 10) return `${ms.toFixed(1)} ms`;
   if (ms < 1000) return `${Math.round(ms)} ms`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(ms < 10_000 ? 2 : 1)} s`;
   return `${(ms / 60_000).toFixed(1)} min`;

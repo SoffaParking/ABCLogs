@@ -3,7 +3,7 @@
 apiloupe is one server process plus Postgres.
 
 ```
- your app ── @apiloupe/node (SDK, M2) ──┐
+ your app ── @apiloupe/node (SDK) ──────┐
                                         ├─► POST /ingest/v1/events ─► Postgres ◄─ /api/v1/* ◄─ dashboard
  existing logs ── apiloupe-import ──────┘
 ```
@@ -41,6 +41,17 @@ from a file later are one event.
 
 A write gate bounds how many batches hit the database at once; beyond its
 queue, senders get `503` with `Retry-After` instead of piling up.
+
+## The Node.js SDK
+
+`@apiloupe/node` records events into a fixed-size ring buffer and sends them
+in gzip batches on a timer, one request at a time. The hot path is a single
+buffer write: the middleware notes method, path, route, status and duration
+on `finish`; the pino stream stores the raw line, which is parsed only when
+the batch is built, with the same `mapLogLine` and line-hash id the importer
+uses. Background sends do not keep the process alive; `flush` and `shutdown`
+do, up to their deadline. The package is bundled (shared code included) into
+one CommonJS and one ESM file with no runtime dependencies.
 
 ## Storage
 

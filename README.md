@@ -5,9 +5,9 @@ volume, latency and status codes, slice everything by severity with a single
 "show this level and above" control, and follow any failed request to the log
 lines and stack trace it produced.
 
-> **Status: 0.1 (milestone M1).** Ingest, the dashboard, sign-in and the log
-> importer work. Grouped errors, the Node SDK and native CloudWatch import are
-> next; see the [roadmap](#roadmap).
+> **Status: 0.2 (milestone M2).** Ingest, the dashboard, sign-in, the log
+> importer and the Node.js SDK work. Grouped errors and native CloudWatch
+> import are next; see the [roadmap](#roadmap).
 
 ## What it does
 
@@ -40,6 +40,9 @@ docker compose up -d
 docker compose logs app | grep 'setup code'
 ```
 
+The app prints the setup code a few seconds after it starts, so if the `grep`
+finds nothing, wait a moment and run it again.
+
 Open <http://localhost:8080>, enter the setup code from the log, and create the
 first admin. Then create a project and an ingest key (the dashboard walks you
 through it).
@@ -56,6 +59,30 @@ Before running it anywhere but your own machine, change `POSTGRES_PASSWORD`
 proxy, and set `PUBLIC_URL` to the https address people will use.
 
 ## Sending data
+
+**From a Node.js app**, with [`@apiloupe/node`](packages/sdk-node) (no
+dependencies; CommonJS and ESM):
+
+```js
+const { createApiloupe } = require('@apiloupe/node');
+const apiloupe = createApiloupe({
+  endpoint: process.env.APILOUPE_ENDPOINT,
+  key: process.env.APILOUPE_KEY,
+});
+
+app.use(apiloupe.express()); // every request
+const logger = pino(
+  opts,
+  pino.multistream([
+    { stream: process.stdout },
+    { stream: apiloupe.pinoStream({ requests: false }) }, // every log line
+  ]),
+);
+```
+
+It never throws into your app, costs microseconds per request, keeps its queue
+bounded when apiloupe is down, and does nothing until both settings are
+present. [examples/express-pino](examples/express-pino) is a complete app.
 
 **Existing log files.** `apiloupe-import` reads JSON log lines from files
 (gzipped or not) or standard input:
@@ -150,7 +177,7 @@ See [docs/architecture.md](docs/architecture.md) for how the pieces fit.
 | --------- | ------------------------------------------------------------------------------------- | ------ |
 | M0        | Repository, tooling, CI, Docker image, health checks                                  | done   |
 | M1        | Ingest API, overview with severity filter, requests and logs pages, importer, sign-in | done   |
-| M2        | Node.js SDK: Express middleware and pino destination                                  |        |
+| M2        | Node.js SDK: Express middleware and pino destination                                  | done   |
 | M3        | Grouped errors: issues, resolve and ignore, regressions, trends                       |        |
 | M4        | AWS CloudWatch import with resume                                                     |        |
 | M5        | Live tail, sampling, end-to-end browser tests, 1.0                                    |        |

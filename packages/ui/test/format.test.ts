@@ -7,6 +7,7 @@ describe('formatting', () => {
   it('durations pick a readable unit', () => {
     expect(formatDuration(null)).toBe('–');
     expect(formatDuration(0.4)).toBe('<1 ms');
+    expect(formatDuration(2.5)).toBe('2.5 ms');
     expect(formatDuration(12.6)).toBe('13 ms');
     expect(formatDuration(1500)).toBe('1.50 s');
     expect(formatDuration(25_000)).toBe('25.0 s');
