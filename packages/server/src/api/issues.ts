@@ -77,7 +77,7 @@ export function issueRoutes(app: FastifyInstance, ctx: AppContext): void {
   ): Promise<Map<number, number>> {
     if (ids.length === 0) return new Map();
     const { rows } = await ctx.pool.query<{ issue_id: number; n: number }>(
-      `SELECT issue_id, count(*)::int AS n FROM log_events
+      `SELECT issue_id, sum(weight)::int AS n FROM log_events
         WHERE project_id = $1 AND issue_id = ANY($2) AND time >= $3 AND time < $4
         GROUP BY issue_id`,
       [projectId, ids, range.from, range.to],
@@ -174,7 +174,7 @@ export function issueRoutes(app: FastifyInstance, ctx: AppContext): void {
       `SELECT ${ISSUE_COLUMNS.split(',')
         .map((c) => `i.${c.trim()}`)
         .join(', ')}, c.n
-         FROM (SELECT issue_id, count(*)::int AS n FROM log_events
+         FROM (SELECT issue_id, sum(weight)::int AS n FROM log_events
                 WHERE project_id = $1 AND issue_id IS NOT NULL AND time >= $2 AND time < $3
                 GROUP BY issue_id) c
          JOIN issues i ON i.id = c.issue_id
@@ -208,7 +208,7 @@ export function issueRoutes(app: FastifyInstance, ctx: AppContext): void {
     const binWhere = [project.id, id, range.from, range.to, range.stepSeconds];
     const [series, recent] = await Promise.all([
       ctx.pool.query<{ t: Date; n: number }>(
-        `SELECT date_bin(make_interval(secs => $5), time, TIMESTAMPTZ '1970-01-01Z') AS t, count(*)::int AS n
+        `SELECT date_bin(make_interval(secs => $5), time, TIMESTAMPTZ '1970-01-01Z') AS t, sum(weight)::int AS n
            FROM log_events WHERE project_id = $1 AND issue_id = $2 AND time >= $3 AND time < $4
           GROUP BY 1`,
         binWhere,

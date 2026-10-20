@@ -216,3 +216,51 @@ describe('client', () => {
     expect(s.events()).toHaveLength(6);
   });
 });
+
+describe('sampling', () => {
+  it('sends a share of routine events, marked with the rate, and every error', async () => {
+    const s = await server();
+    const c = client({ endpoint: s.url, key: KEY, sampleRate: 0.1, batchSize: 1000 });
+    const middleware = c.express();
+    const { EventEmitter } = await import('node:events');
+    for (let i = 0; i < 2000; i++) {
+      const res = Object.assign(new EventEmitter(), { statusCode: i % 100 === 0 ? 500 : 200 });
+      middleware({ method: 'GET', url: `/x/${i}`, headers: {} }, res, () => undefined);
+      res.emit('finish');
+    }
+    c.captureException(new Error('always sent'));
+    await c.flush();
+    const events = s.events();
+    const ok = events.filter((e) => e.type === 'request' && e.status === 200);
+    const failed = events.filter((e) => e.type === 'request' && e.status === 500);
+    expect(failed).toHaveLength(20);
+    expect(failed.every((e) => e.sampleRate === undefined)).toBe(true);
+    expect(ok.length).toBeGreaterThan(130);
+    expect(ok.length).toBeLessThan(270);
+    expect(ok.every((e) => e.sampleRate === 0.1)).toBe(true);
+    expect(events.filter((e) => e.type === 'log')).toHaveLength(1);
+    expect(c.stats().sampledOut).toBe(1980 - ok.length);
+  });
+
+  it('samples pino lines by their content, so an import at the same rate keeps the same ones', async () => {
+    const { eventIdForLine: idOf } = await import('@apiloupe/shared/node');
+    const { inSample } = await import('@apiloupe/shared');
+    const s = await server();
+    const c = client({ endpoint: s.url, key: KEY, sampleRate: 0.3 });
+    const T = new Date().toISOString();
+    const lines = Array.from(
+      { length: 200 },
+      (_, i) => `{"level":30,"time":"${T}","msg":"line ${i}"}`,
+    );
+    const stream = c.pinoStream();
+    for (const line of lines) stream.write(`${line}\n`);
+    stream.write(`{"level":50,"time":"${T}","msg":"an error"}\n`);
+    await c.flush();
+    const sentIds = s
+      .events()
+      .filter((e) => e.level === 30)
+      .map((e) => e.id);
+    expect(sentIds).toEqual(lines.map(idOf).filter((id) => inSample(id, 0.3)));
+    expect(s.events().some((e) => e.message === 'an error')).toBe(true);
+  });
+});

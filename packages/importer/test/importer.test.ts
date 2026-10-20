@@ -150,3 +150,24 @@ describe('synthesizeLines', () => {
     expect(Math.min(...times)).toBeGreaterThanOrEqual(now - 11 * 60_000);
   });
 });
+
+describe('--sample-rate', () => {
+  it('keeps the routine lines the SDK would keep at the same rate, and every error', async () => {
+    const { eventIdForLine } = await import('@apiloupe/shared/node');
+    const { inSample } = await import('@apiloupe/shared');
+    const T2 = new Date().toISOString();
+    const lines = Array.from(
+      { length: 300 },
+      (_, i) => `{"level":30,"time":"${T2}","msg":"m${i}"}`,
+    );
+    lines.push(`{"level":50,"time":"${T2}","msg":"boom"}`);
+    const stats = await runImport(lines, {
+      endpoint: 'http://127.0.0.1:1',
+      dryRun: true,
+      sampleRate: 0.2,
+    });
+    const expected = lines.slice(0, 300).filter((l) => inSample(eventIdForLine(l), 0.2)).length;
+    expect(stats.events).toBe(expected + 1);
+    expect(stats.sampledOut).toBe(300 - expected);
+  });
+});

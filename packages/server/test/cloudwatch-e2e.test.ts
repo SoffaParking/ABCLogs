@@ -112,4 +112,73 @@ describe.skipIf(!hasDatabase)('live SDK + CloudWatch backfill', () => {
       expect.objectContaining({ title: 'lock wait timeout', count: 20 }),
     ]);
   });
+
+  it('sampled live shipping and a backfill at the same rate store the same lines once', async () => {
+    const { slug, key } = await projectWithKey(t.app, cookie, 'Sampled');
+    const stdout: string[] = [];
+    const capture = new Writable({
+      write(chunk: Buffer, _encoding, done) {
+        stdout.push(chunk.toString().trimEnd());
+        done();
+      },
+    });
+    const apiloupe = createApiloupe({ endpoint, key, onError: false, sampleRate: 0.2 });
+    const logger = pino(
+      { base: { service: 'api' }, timestamp: pino.stdTimeFunctions.isoTime },
+      pino.multistream([{ stream: capture }, { stream: apiloupe.pinoStream() }]),
+    );
+    for (let i = 0; i < 500; i++) {
+      const failed = i % 25 === 0;
+      logger[failed ? 'error' : 'info'](
+        {
+          requestId: `q${i}`,
+          method: 'GET',
+          path: '/api/x',
+          status: failed ? 500 : 200,
+          durationMs: 4,
+        },
+        'request',
+      );
+    }
+    await apiloupe.shutdown();
+    const sent = apiloupe.stats().sent;
+
+    const events = stdout.map((message) => ({
+      timestamp: Date.parse((JSON.parse(message) as { time: string }).time),
+      message,
+    }));
+    const times = events.map((e) => e.timestamp);
+    const backfill = await runCloudWatchImport(
+      {
+        fetchPage: ({ start, end }) =>
+          Promise.resolve({
+            events: events.filter((e) => e.timestamp >= start && e.timestamp < end),
+          }),
+      },
+      {
+        endpoint,
+        key,
+        sampleRate: 0.2,
+        source: { logGroup: '/ecs/sampled', streamPrefix: null, filterPattern: null },
+        since: Math.min(...times) - 60_000,
+        until: Math.max(...times) + 60_000,
+        checkpointFile: null,
+      },
+    );
+    // Same rate, same lines: nothing new.
+    expect(backfill.accepted).toBe(0);
+    expect(backfill.duplicates).toBe(sent);
+
+    const range = `from=${Date.now() - 3_600_000}&to=${Date.now() + 60_000}`;
+    const overview = await t.app.inject({
+      url: `/api/v1/projects/${slug}/overview?${range}`,
+      headers: { cookie },
+    });
+    const totals = overview.json<{ totals: { requests: number; status: Record<string, number> } }>()
+      .totals;
+    // Failures are never sampled: exact. The rest is an estimate of 480.
+    expect(totals.status['5xx']).toBe(20);
+    expect(totals.requests).toBeGreaterThan(300);
+    expect(totals.requests).toBeLessThan(700);
+  });
 });

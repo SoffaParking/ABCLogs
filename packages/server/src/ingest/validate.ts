@@ -8,6 +8,7 @@ import {
   redact,
   redactString,
   routeFromPath,
+  sampleWeight,
 } from '@apiloupe/shared';
 
 export interface StoredRequest {
@@ -23,6 +24,8 @@ export interface StoredRequest {
   durationMs: number | null;
   requestId: string | null;
   attrs: string | null;
+  /** How many events this one stands for (sampling); 1 normally. */
+  weight: number;
 }
 
 export interface StoredLog {
@@ -37,6 +40,7 @@ export interface StoredLog {
   errorMessage: string | null;
   errorStack: string | null;
   attrs: string | null;
+  weight: number;
 }
 
 export type StoredEvent = StoredRequest | StoredLog;
@@ -80,6 +84,13 @@ export function checkEvent(raw: unknown, window: Window): Checked {
   if (requestId === false) return fail('requestId must be a string');
   const attrs = serializeAttrs(e.attrs);
   if (attrs === false) return fail('attrs must be an object');
+  let weight = 1;
+  if (e.sampleRate !== undefined && e.sampleRate !== null) {
+    if (typeof e.sampleRate !== 'number' || !(e.sampleRate > 0) || e.sampleRate > 1) {
+      return fail('sampleRate must be a number above 0 and at most 1');
+    }
+    weight = sampleWeight(e.sampleRate);
+  }
 
   if (e.type === 'request') {
     const method = typeof e.method === 'string' ? e.method.toUpperCase() : '';
@@ -116,6 +127,7 @@ export function checkEvent(raw: unknown, window: Window): Checked {
         durationMs,
         requestId,
         attrs,
+        weight,
       },
     };
   }
@@ -155,6 +167,7 @@ export function checkEvent(raw: unknown, window: Window): Checked {
         errorMessage,
         errorStack,
         attrs,
+        weight,
       },
     };
   }

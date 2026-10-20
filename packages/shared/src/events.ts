@@ -24,6 +24,8 @@ export interface RequestEventInput {
   durationMs?: number;
   /** Links the request to the log lines written while serving it. */
   requestId?: string;
+  /** Set when the sender keeps only a share of events like this one; see `sampling.ts`. */
+  sampleRate?: number;
   attrs?: Record<string, unknown>;
 }
 
@@ -37,6 +39,7 @@ export interface LogEventInput {
   message: string;
   requestId?: string;
   error?: ErrorInput;
+  sampleRate?: number;
   attrs?: Record<string, unknown>;
 }
 
