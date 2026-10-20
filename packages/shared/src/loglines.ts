@@ -5,7 +5,7 @@ import { pathOnly } from './routes.js';
 
 /**
  * Maps one line of a JSON log (pino, pino-http, bunyan and most JSON loggers)
- * onto an apiloupe event. Shared by the importer and the SDK's pino
+ * onto an event. Shared by the importer and the SDK's pino
  * destination, so a line shipped live and the same line imported later become
  * the same event.
  *

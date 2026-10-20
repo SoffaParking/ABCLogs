@@ -35,7 +35,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
           labels: |
-            org.opencontainers.image.title=apiloupe
+            org.opencontainers.image.title=Soffa API Logs Dashboard
             org.opencontainers.image.description=Self-hosted dashboard for your API's requests and errors
             org.opencontainers.image.licenses=MIT
       - uses: docker/build-push-action@v7

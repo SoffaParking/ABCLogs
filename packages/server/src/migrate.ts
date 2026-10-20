@@ -3,7 +3,7 @@ import type pg from 'pg';
 
 const MIGRATIONS_DIR = new URL('../migrations/', import.meta.url);
 
-// Any constant works; it only has to be the same for every apiloupe process
+// Any constant works; it only has to be the same for every server process
 // sharing a database, so two servers booting at once take turns.
 const MIGRATION_LOCK = 727_001;
 

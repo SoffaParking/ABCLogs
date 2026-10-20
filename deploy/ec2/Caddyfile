@@ -1,5 +1,6 @@
-# HTTPS for apiloupe. Caddy gets and renews the certificate from Let's
-# Encrypt by itself once DNS for $DOMAIN points at this server.
+# HTTPS for the Soffa API Logs Dashboard. Caddy gets and renews the
+# certificate from Let's Encrypt by itself once DNS for $DOMAIN points at this
+# server.
 
 {$DOMAIN} {
 	encode zstd gzip

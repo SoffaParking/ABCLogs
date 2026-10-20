@@ -77,12 +77,15 @@ describe('security headers', () => {
 describe('dashboard hosting', () => {
   it('serves the app shell for client routes but 404s unknown API paths', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'apiloupe-ui-'));
-    writeFileSync(join(dir, 'index.html'), '<!doctype html><title>apiloupe</title>');
+    writeFileSync(
+      join(dir, 'index.html'),
+      '<!doctype html><title>Soffa API Logs Dashboard</title>',
+    );
     const app = await buildApp({ config: config(dir), pool: null });
 
     const shell = await app.inject({ url: '/issues/42' });
     expect(shell.statusCode).toBe(200);
-    expect(shell.body).toContain('<title>apiloupe</title>');
+    expect(shell.body).toContain('<title>Soffa API Logs Dashboard</title>');
     expect((await app.inject({ method: 'HEAD', url: '/issues/42' })).statusCode).toBe(200);
 
     expect((await app.inject({ url: '/api/v1/nope' })).statusCode).toBe(404);
@@ -93,8 +96,8 @@ describe('dashboard hosting', () => {
     const app = await buildApp({ config: config(), pool: null });
     const res = await app.inject({ url: '/api/v1/meta' });
     expect(res.json()).toEqual({
-      name: 'apiloupe',
-      version: '1.0.0',
+      name: 'Soffa API Logs Dashboard',
+      version: '1.1.0',
       levels: ['trace', 'debug', 'info', 'warn', 'error', 'fatal'],
     });
   });

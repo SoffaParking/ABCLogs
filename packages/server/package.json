@@ -1,8 +1,8 @@
 {
   "name": "@apiloupe/server",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "The apiloupe ingest API, query API and dashboard host.",
+  "description": "The Soffa API Logs Dashboard server: ingest API, query API and host for the web app.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

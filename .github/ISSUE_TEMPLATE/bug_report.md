@@ -15,7 +15,7 @@ labels: bug
 
 **Environment**
 
-- apiloupe version / image tag:
+- Soffa API Logs Dashboard version / image tag:
 - Postgres version:
 - How it runs (Docker Compose, Kubernetes, …):
 

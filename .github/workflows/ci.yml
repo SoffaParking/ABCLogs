@@ -151,7 +151,7 @@ jobs:
           exit 1
       - name: Dashboard and security headers
         run: |
-          curl -sf http://127.0.0.1:8080/ | grep -q '<title>apiloupe</title>'
+          curl -sf http://127.0.0.1:8080/ | grep -q '<title>Soffa API Logs Dashboard</title>'
           curl -sI http://127.0.0.1:8080/ | grep -qi "content-security-policy: default-src 'self'"
       - name: Set up, import demo traffic with the bundled importer, read it back
         run: |

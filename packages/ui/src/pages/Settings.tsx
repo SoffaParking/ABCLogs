@@ -452,7 +452,8 @@ function Users({ me }: { me: User }) {
 
       <Card title="Invite someone">
         <p className="muted">
-          You get a one-time link to send them (valid 7 days). apiloupe does not send email.
+          You get a one-time link to send them (valid 7 days). Soffa API Logs Dashboard does not
+          send email.
         </p>
         <form
           className="form inline-form"
@@ -523,7 +524,7 @@ function About() {
   });
   return (
     <p className="muted small">
-      apiloupe {meta.data?.version ?? ''} ·{' '}
+      Soffa API Logs Dashboard {meta.data?.version ?? ''} ·{' '}
       <a href="https://github.com/emaalouf/apiloupe" target="_blank" rel="noreferrer">
         github.com/emaalouf/apiloupe
       </a>

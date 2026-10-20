@@ -24,7 +24,7 @@ from the first line of standard input:
 
   echo 'a long password' | apiloupe-server create-admin --email you@example.com
 
-DATABASE_URL must point at the apiloupe database.`;
+DATABASE_URL must point at the Soffa API Logs Dashboard's database.`;
 
 function fail(message: string): never {
   console.error(message);

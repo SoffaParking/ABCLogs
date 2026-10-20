@@ -118,7 +118,11 @@ export async function buildApp({ config, pool }: AppDeps): Promise<App> {
         void reply.header('cache-control', 'no-store');
         next();
       });
-      api.get('/meta', () => ({ name: 'apiloupe', version: VERSION, levels: LEVEL_NAMES }));
+      api.get('/meta', () => ({
+        name: 'Soffa API Logs Dashboard',
+        version: VERSION,
+        levels: LEVEL_NAMES,
+      }));
       if (ctx) {
         installSessionHooks(api, ctx);
         authRoutes(api, ctx);

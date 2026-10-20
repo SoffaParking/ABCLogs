@@ -1,7 +1,7 @@
 # Example: Express + pino
 
-A small API that sends its requests, logs and errors to apiloupe with
-[`@apiloupe/node`](../../packages/sdk-node).
+A small API that sends its requests, logs and errors to the Soffa API Logs
+Dashboard with [`@apiloupe/node`](../../packages/sdk-node).
 
 ```sh
 pnpm install && pnpm build          # from the repository root

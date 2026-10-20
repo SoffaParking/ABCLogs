@@ -178,7 +178,14 @@ describe.skipIf(!hasDatabase)('issues', () => {
     expect(again.status).toBe('resolved');
     expect(again.count).toBe(3);
 
-    await send([error('c-new', -0.1, { error: { message: 'lock wait timeout on row 4' } })]);
+    // Stamped from the clock now, not from `now`: on a busy machine the
+    // resolution can land more than a few seconds after this file loaded.
+    await send([
+      {
+        ...error('c-new', 0, { error: { message: 'lock wait timeout on row 4' } }),
+        time: Date.now() + 1_000,
+      },
+    ]);
     again = (await issues()).items.find((i) => i.id === lock.id)!;
     expect(again.status).toBe('unresolved');
     expect(again.regressedAt).not.toBeNull();

@@ -1,10 +1,14 @@
-# apiloupe
+# Soffa API Logs Dashboard
 
 **Self-hosted dashboard for your API's requests and errors.** See request
 volume, latency and status codes, slice everything by severity with one
 "show this level and above" control, follow a failed request to the log lines
 and stack trace it produced, and get identical errors folded into issues you
 can resolve.
+
+The project was called apiloupe at first, and its repository, packages,
+commands and settings keep that name (`@apiloupe/node`, `apiloupe-import`,
+`APILOUPE_*`), so existing installs and integrations carry on unchanged.
 
 ![The overview: requests, error rates, latency and events by severity](docs/screenshots/overview.png)
 
@@ -48,7 +52,7 @@ through it). To see it with data straight away:
 docker compose exec app apiloupe-import --demo 360 --key alk_...
 ```
 
-**On a server:** [deploy/ec2](deploy/ec2) launches apiloupe on a small AWS
+**On a server:** [deploy/ec2](deploy/ec2) launches the dashboard on a small AWS
 instance with one command, HTTPS and nightly backups included. Anywhere else,
 run the image `ghcr.io/emaalouf/apiloupe` behind a TLS proxy, with
 `DATABASE_URL` pointing at Postgres 15 or newer and `PUBLIC_URL` set to its
@@ -79,8 +83,8 @@ const logger = pino(
 ```
 
 It never throws into your app, costs microseconds per request, keeps its
-queue bounded when apiloupe is down, and does nothing until both settings are
-present. For busy apps, `sampleRate: 0.1` sends a tenth of the successful
+queue bounded when the dashboard is down, and does nothing until both settings
+are present. For busy apps, `sampleRate: 0.1` sends a tenth of the successful
 requests and routine logs (never errors or warnings) and the dashboard scales
 the counts back up. [examples/express-pino](examples/express-pino) is a
 complete app.
@@ -109,7 +113,7 @@ apiloupe-import --key alk_... --cloudwatch --log-group /ecs/my-api \
 ```
 
 It uses the same credentials as the `aws` CLI, reads in one-hour windows and
-saves its place after each window apiloupe has accepted, so an interrupted
+saves its place after each window the server has accepted, so an interrupted
 import resumes where it stopped. `--follow` keeps importing new logs. The
 credentials need `logs:FilterLogEvents` on the log group:
 
@@ -157,8 +161,8 @@ curl -X POST https://apiloupe.example.com/ingest/v1/events \
 
 The first admin is created in the browser with the setup code from the server
 log, so whoever reaches a fresh server first cannot claim it. Admins invite
-people from **Settings → Users** with a one-time link (apiloupe sends no
-email). Members see every project and can resolve and ignore issues; admins
+people from **Settings → Users** with a one-time link (the dashboard sends
+no email). Members see every project and can resolve and ignore issues; admins
 also manage projects, keys and users.
 
 ```sh
@@ -198,7 +202,7 @@ pnpm build && pnpm test:e2e    # browser tests (Playwright)
 | `packages/importer` | `apiloupe-import`: files, pipes and CloudWatch Logs            |
 | `packages/sdk-node` | `@apiloupe/node`: Express middleware and pino stream           |
 | `e2e`               | Browser tests and the README's screenshots                     |
-| `examples/*`        | Small apps wired to apiloupe                                   |
+| `examples/*`        | Small apps wired to the dashboard                              |
 | `deploy/ec2`        | One-command deployment on AWS                                  |
 
 [docs/architecture.md](docs/architecture.md) explains how the pieces fit;

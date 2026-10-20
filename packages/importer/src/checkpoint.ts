@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-/** Where a CloudWatch import has got to: every event before `position` is in apiloupe. */
+/** Where a CloudWatch import has got to: every event before `position` is stored. */
 export interface Checkpoint {
   version: 1;
   source: CheckpointSource;

@@ -1,6 +1,6 @@
 # Architecture
 
-apiloupe is one server process plus Postgres.
+The Soffa API Logs Dashboard is one server process plus Postgres.
 
 ```
  your app ── @apiloupe/node (SDK) ──────┐
@@ -118,7 +118,7 @@ were last seen, so a long-quiet issue that comes back is still a regression.
 ## Live tail and sampling
 
 The live tail polls `GET …/logs/tail` every two seconds with a cursor on
-`received_at` (the time apiloupe stored the line), over the last day's
+`received_at` (the time the server stored the line), over the last day's
 partitions. Rows of one batch share their transaction's start time, and
 batches can commit out of order, so each poll re-reads ten seconds before its
 cursor and the browser drops lines it has already shown.
