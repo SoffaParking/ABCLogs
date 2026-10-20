@@ -5,6 +5,7 @@ import Fastify, { LogController, type FastifyError, type FastifyInstance } from 
 import type pg from 'pg';
 import { LEVEL_NAMES } from '@apiloupe/shared';
 import { eventRoutes } from './api/events.js';
+import { issueRoutes } from './api/issues.js';
 import { projectRoutes } from './api/projects.js';
 import { statsRoutes } from './api/stats.js';
 import { userRoutes } from './api/users.js';
@@ -118,6 +119,7 @@ export async function buildApp({ config, pool }: AppDeps): Promise<App> {
         projectRoutes(api, ctx);
         statsRoutes(api, ctx);
         eventRoutes(api, ctx);
+        issueRoutes(api, ctx);
       }
       done();
     },

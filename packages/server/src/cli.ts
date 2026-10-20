@@ -5,6 +5,7 @@ import { hashPassword, passwordProblem } from './auth/passwords.js';
 import { loadConfig } from './config.js';
 import { createPool } from './db.js';
 import { migrate } from './migrate.js';
+import { reprocessIssues } from './reprocess.js';
 
 const USAGE = `Usage: apiloupe-server <command> [options]
 
@@ -13,6 +14,10 @@ Commands:
   create-admin --email <e> [--name <n>] Create an admin account.
   reset-password --email <e>            Set a new password for an account
                                         and sign it out everywhere.
+  reprocess-issues [--project <slug>]   Regroup stored error events into
+                                        issues with the current rules (all
+                                        projects by default). Ingest of errors
+                                        pauses while it runs.
 
 The password is read from the APILOUPE_PASSWORD environment variable, or
 from the first line of standard input:
@@ -40,6 +45,7 @@ const { positionals, values } = parseArgs({
   options: {
     email: { type: 'string' },
     name: { type: 'string' },
+    project: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -74,6 +80,20 @@ try {
     if (!rows[0]) fail(`no user with email ${email}`);
     await pool.query('DELETE FROM sessions WHERE user_id = $1', [rows[0].id]);
     console.log(`password for ${email} changed; existing sessions signed out`);
+  } else if (command === 'reprocess-issues') {
+    const { rows } = await pool.query<{ id: number; slug: string }>(
+      values.project
+        ? 'SELECT id, slug FROM projects WHERE slug = $1'
+        : 'SELECT id, slug FROM projects ORDER BY id',
+      values.project ? [values.project] : [],
+    );
+    if (rows.length === 0) fail(values.project ? `no project ${values.project}` : 'no projects');
+    for (const project of rows) {
+      const r = await reprocessIssues(pool, Number(project.id));
+      console.log(
+        `${project.slug}: ${r.events} error events, ${r.moved} regrouped; issues ${r.issuesBefore} → ${r.issuesAfter}`,
+      );
+    }
   } else {
     fail(`unknown command "${command}"\n\n${USAGE}`);
   }

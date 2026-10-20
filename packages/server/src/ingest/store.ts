@@ -1,5 +1,12 @@
 import { emptyHistogram, histogramBucket } from '@apiloupe/shared';
 import type pg from 'pg';
+import {
+  ISSUE_LEVEL,
+  issueGroupFor,
+  recordOccurrences,
+  upsertIssues,
+  type IssueGroup,
+} from '../issues.js';
 import type { StoredEvent, StoredLog, StoredRequest } from './validate.js';
 
 const MINUTE_MS = 60_000;
@@ -22,15 +29,17 @@ interface InsertedRequest {
 
 interface InsertedLog {
   time: Date;
+  id: string;
   service: string;
   level: number;
+  issue_id: number | null;
 }
 
 /**
  * Writes a batch in one transaction: the raw events, skipping any already
- * stored, then the per-minute rollups built from the rows that were actually
- * inserted. Counting only inserted rows is what keeps a re-sent batch from
- * double-counting in the charts.
+ * stored, then the per-minute rollups and the issues' counts, built from the
+ * rows that were actually inserted. Counting only inserted rows is what keeps
+ * a re-sent batch from double-counting anywhere.
  *
  * Events and rollup keys are sorted first so concurrent batches take row
  * locks in the same order and cannot deadlock.
@@ -46,8 +55,10 @@ export async function storeBatch(
   const requests = events.filter((e): e is StoredRequest => e.kind === 'request').sort(byTime);
   const logs = events.filter((e): e is StoredLog => e.kind === 'log').sort(byTime);
 
+  const issueOf = await assignIssues(client, projectId, logs);
   const insertedRequests = requests.length ? await insertRequests(client, projectId, requests) : [];
-  const insertedLogs = logs.length ? await insertLogs(client, projectId, logs) : [];
+  const insertedLogs = logs.length ? await insertLogs(client, projectId, logs, issueOf) : [];
+  await recordOccurrences(client, insertedLogs);
 
   await upsertRequestRollups(client, projectId, insertedRequests);
   await upsertLevelRollups(client, projectId, insertedRequests, insertedLogs);
@@ -98,20 +109,56 @@ async function insertRequests(
   return inserted;
 }
 
+/** The issue id for each error-level log, creating issues as needed. */
+async function assignIssues(
+  client: pg.PoolClient,
+  projectId: number,
+  logs: StoredLog[],
+): Promise<Map<StoredLog, number>> {
+  const groups = new Map<
+    string,
+    IssueGroup & { level: number; firstSeen: number; lastSeen: number }
+  >();
+  const fingerprintOf = new Map<StoredLog, string>();
+  for (const log of logs) {
+    if (log.level < ISSUE_LEVEL) continue;
+    const group = issueGroupFor(log);
+    fingerprintOf.set(log, group.fingerprint);
+    const seen = groups.get(group.fingerprint);
+    if (seen) {
+      seen.level = Math.max(seen.level, log.level);
+      seen.firstSeen = Math.min(seen.firstSeen, log.time);
+      seen.lastSeen = Math.max(seen.lastSeen, log.time);
+    } else {
+      groups.set(group.fingerprint, {
+        ...group,
+        level: log.level,
+        firstSeen: log.time,
+        lastSeen: log.time,
+      });
+    }
+  }
+  const ids = await upsertIssues(client, projectId, [...groups.values()]);
+  const out = new Map<StoredLog, number>();
+  for (const [log, fingerprint] of fingerprintOf) out.set(log, ids.get(fingerprint)!);
+  return out;
+}
+
 async function insertLogs(
   client: pg.PoolClient,
   projectId: number,
   rows: StoredLog[],
+  issueOf: Map<StoredLog, number>,
 ): Promise<InsertedLog[]> {
   const { rows: inserted } = await client.query<InsertedLog>(
     `INSERT INTO log_events
        (project_id, time, id, service, level, message, request_id, error_type, error_message,
-        error_stack, attrs)
+        error_stack, attrs, issue_id)
      SELECT $1::bigint, u.*
        FROM unnest($2::timestamptz[], $3::text[], $4::text[], $5::int2[], $6::text[], $7::text[],
-                   $8::text[], $9::text[], $10::text[], $11::jsonb[]) AS u
+                   $8::text[], $9::text[], $10::text[], $11::jsonb[], $12::bigint[]) AS u
      ON CONFLICT DO NOTHING
-     RETURNING time, service, level`,
+     RETURNING time, id, service, level, issue_id`,
     [
       projectId,
       rows.map((r) => new Date(r.time).toISOString()),
@@ -124,6 +171,7 @@ async function insertLogs(
       rows.map((r) => r.errorMessage),
       rows.map((r) => r.errorStack),
       rows.map((r) => r.attrs),
+      rows.map((r) => issueOf.get(r) ?? null),
     ],
   );
   return inserted;

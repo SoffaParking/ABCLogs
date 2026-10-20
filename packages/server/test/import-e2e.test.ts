@@ -148,6 +148,20 @@ describe.skipIf(!hasDatabase)('import → dashboard numbers', () => {
     expect(lockWaits.items).toHaveLength(expectedLockWaits);
   });
 
+  it('groups every error and fatal line into issues, each counted once', async () => {
+    const list = await get<{ items: { title: string; count: number; culprit: string | null }[] }>(
+      `/issues?${range}&status=all`,
+    );
+    const errorLines = logs.filter((o) => (o.level as number) >= 50).length;
+    expect(list.items.reduce((sum, i) => sum + i.count, 0)).toBe(errorLines);
+    // The synthetic app fails in a handful of distinct ways, not once per line.
+    expect(list.items.length).toBeGreaterThan(3);
+    expect(list.items.length).toBeLessThan(10);
+    expect(list.items).toContainEqual(
+      expect.objectContaining({ count: 1, culprit: 'closeSession (services/sessionService.js)' }),
+    );
+  });
+
   it('offers services and routes as filters', async () => {
     const facets = await get<{ services: string[]; routes: { route: string }[] }>(
       `/facets?${range}`,
