@@ -1000,3 +1000,98 @@ select {
     width: auto;
   }
 }
+
+/* ---------- issues ---------- */
+
+.page-intro {
+  margin: -8px 0 0;
+}
+.segmented .count {
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+.issue-title {
+  color: var(--fg);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.issue-title:hover {
+  color: var(--accent);
+}
+.issue-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 4px;
+}
+.issue-meta code {
+  font-size: 12px;
+}
+.issue-actions {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.issue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.issue-heading {
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+.issue-grid {
+  align-items: start;
+}
+.issues-table td {
+  vertical-align: middle;
+}
+.grouping {
+  margin-top: 16px;
+}
+.grouping summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+.grouping pre {
+  margin-top: 8px;
+}
+
+.sparkline rect {
+  fill: var(--c-error);
+}
+.sparkline-base {
+  stroke: var(--border);
+}
+
+.stacktrace {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.stacktrace .stack-head {
+  color: var(--bad);
+  font-weight: 600;
+}
+.stacktrace .frame {
+  color: var(--muted);
+  opacity: 0.75;
+}
+.stacktrace .frame.in-app {
+  color: var(--fg);
+  opacity: 1;
+}
+.stacktrace .frame.in-app .frame-file {
+  color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .hide-narrow {
+    display: none;
+  }
+}

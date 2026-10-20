@@ -156,6 +156,7 @@ export interface LogItem {
   hasStack?: boolean;
   errorStack?: string | null;
   attrs?: unknown;
+  issueId?: number | null;
 }
 
 export interface Page<T> {
@@ -166,4 +167,60 @@ export interface Page<T> {
 export interface Facets {
   services: string[];
   routes: { method: string; route: string; count: number }[];
+}
+
+export type IssueStatus = 'unresolved' | 'resolved' | 'ignored';
+
+export interface Issue {
+  id: number;
+  service: string;
+  errorType: string | null;
+  title: string;
+  culprit: string | null;
+  level: number;
+  status: IssueStatus;
+  count: number;
+  firstSeen: string;
+  lastSeen: string;
+  resolvedAt: string | null;
+  regressedAt: string | null;
+}
+
+export interface IssueList {
+  items: (Issue & { rangeCount: number; spark: number[] })[];
+  totals: Record<IssueStatus, number>;
+  hasMore: boolean;
+}
+
+export interface TopIssues {
+  items: (Issue & { rangeCount: number })[];
+  newIssues: number;
+}
+
+export interface IssueDetail {
+  issue: Issue & { groupingKey: string };
+  rangeCount: number;
+  series: { t: string; count: number }[];
+  latest: (LogItem & { errorStack: string | null }) | null;
+  occurrences: {
+    ref: string;
+    time: string;
+    service: string;
+    level: number;
+    message: string;
+    errorMessage: string | null;
+    requestId: string | null;
+    request: {
+      ref: string;
+      method: string;
+      path: string;
+      status: number;
+      durationMs: number | null;
+    } | null;
+  }[];
+  routes: {
+    sampled: number;
+    withRequest: number;
+    items: { method: string; route: string; count: number }[];
+  };
 }

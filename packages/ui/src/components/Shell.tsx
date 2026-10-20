@@ -109,6 +109,7 @@ export function Shell({ user, children }: { user: User; children: ReactNode }) {
           {slug && (
             <nav className="tabs" aria-label="Sections">
               {tab('', 'Overview')}
+              {tab('/issues', 'Issues')}
               {tab('/requests', 'Requests')}
               {tab('/logs', 'Logs')}
             </nav>

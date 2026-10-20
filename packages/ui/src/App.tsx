@@ -5,6 +5,7 @@ import { api, setUnauthorizedHandler, type AuthState } from './api';
 import { LAST_PROJECT_KEY, Shell, useProjects } from './components/Shell';
 import { ErrorNote, Spinner } from './components/ui';
 import { InvitePage, LoginPage, SetupPage } from './pages/Auth';
+import { IssuePage, IssuesPage } from './pages/Issues';
 import { LogsPage } from './pages/Logs';
 import { Onboarding } from './pages/Onboarding';
 import { OverviewPage } from './pages/Overview';
@@ -77,6 +78,8 @@ export function App() {
       <Switch>
         <Route path="/">{() => <Home isAdmin={user.role === 'admin'} />}</Route>
         <Route path="/p/:slug">{(p) => <OverviewPage slug={p.slug} />}</Route>
+        <Route path="/p/:slug/issues">{(p) => <IssuesPage slug={p.slug} />}</Route>
+        <Route path="/p/:slug/issues/:id">{(p) => <IssuePage slug={p.slug} id={p.id} />}</Route>
         <Route path="/p/:slug/requests">{(p) => <RequestsPage slug={p.slug} />}</Route>
         <Route path="/p/:slug/logs">{(p) => <LogsPage slug={p.slug} />}</Route>
         <Route path="/settings/:tab?/:item?">

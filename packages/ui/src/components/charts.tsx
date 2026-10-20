@@ -164,7 +164,8 @@ export function StackedBars({
   label: string;
 }) {
   const totals = data.map((point) => series.reduce((sum, s) => sum + (num(point, s.key) ?? 0), 0));
-  const yMax = niceMax(Math.max(0, ...totals));
+  // Bars are counts: an axis of at least 2 keeps the middle grid line a whole number.
+  const yMax = Math.max(2, niceMax(Math.max(0, ...totals)));
   return (
     <Frame
       data={data}

@@ -5,9 +5,9 @@ volume, latency and status codes, slice everything by severity with a single
 "show this level and above" control, and follow any failed request to the log
 lines and stack trace it produced.
 
-> **Status: 0.2 (milestone M2).** Ingest, the dashboard, sign-in, the log
-> importer and the Node.js SDK work. Grouped errors and native CloudWatch
-> import are next; see the [roadmap](#roadmap).
+> **Status: 0.3 (milestone M3).** Ingest, the dashboard, grouped errors,
+> sign-in, the log importer and the Node.js SDK work. Native CloudWatch import
+> is next; see the [roadmap](#roadmap).
 
 ## What it does
 
@@ -21,6 +21,10 @@ lines and stack trace it produced.
   request id; open one to see every log line written while serving it.
 - **Logs:** filter by minimum level, search messages and errors, see the stack
   trace and the request behind each error.
+- **Issues:** every error folded into an issue with the others like it (same
+  error type, same place in your code), with a trend line, first and last
+  seen, the routes it hits, and resolve / ignore. A resolved issue that comes
+  back reopens as a regression.
 - **Sign-in:** email and password accounts, admins and members, invite links.
 - **Your logs as they are:** an importer that reads the JSON logs you already
   write (pino, pino-http, bunyan and most JSON loggers), from files or a pipe.
@@ -143,6 +147,7 @@ From the command line (`docker compose exec -T app …` in Docker):
 ```sh
 echo 'a long password' | apiloupe-server create-admin --email you@example.com
 echo 'a new password'  | apiloupe-server reset-password --email you@example.com
+apiloupe-server reprocess-issues            # regroup stored errors into issues
 ```
 
 ## Development
@@ -178,7 +183,7 @@ See [docs/architecture.md](docs/architecture.md) for how the pieces fit.
 | M0        | Repository, tooling, CI, Docker image, health checks                                  | done   |
 | M1        | Ingest API, overview with severity filter, requests and logs pages, importer, sign-in | done   |
 | M2        | Node.js SDK: Express middleware and pino destination                                  | done   |
-| M3        | Grouped errors: issues, resolve and ignore, regressions, trends                       |        |
+| M3        | Grouped errors: issues, resolve and ignore, regressions, trends                       | done   |
 | M4        | AWS CloudWatch import with resume                                                     |        |
 | M5        | Live tail, sampling, end-to-end browser tests, 1.0                                    |        |
 
