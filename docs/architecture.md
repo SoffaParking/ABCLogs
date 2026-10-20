@@ -53,6 +53,21 @@ uses. Background sends do not keep the process alive; `flush` and `shutdown`
 do, up to their deadline. The package is bundled (shared code included) into
 one CommonJS and one ESM file with no runtime dependencies.
 
+## The importer
+
+`apiloupe-import` turns each line into an event with `mapLogLine` and an id
+that is a hash of the line, after taking off a log shipper's envelope (Docker
+json-file, FireLens). That id is what makes imports repeatable and lets a
+backfill overlap with live shipping: the server stores an id once.
+
+From CloudWatch Logs it calls `FilterLogEvents` for one-hour windows, page by
+page, and writes a checkpoint (atomically: temp file, then rename) once every
+event of a window has been accepted. Resumed and `--follow` reads start a few
+minutes before the checkpoint and stay a couple of minutes behind now, so
+events CloudWatch indexes late are still read; the overlap only produces
+duplicates, which cost nothing. Lines without a time of their own take
+CloudWatch's timestamp, so re-imports keep the same id and time.
+
 ## Storage
 
 - `request_events`, `log_events`: raw events, **partitioned by UTC day**.
