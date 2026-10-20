@@ -2,6 +2,9 @@
   "compilerOptions": {
     "target": "ES2023",
     "lib": ["ES2023"],
+    // TypeScript 6 loads no global type packages unless listed. Everything but
+    // the dashboard (which lists its own) runs on Node.
+    "types": ["node"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
