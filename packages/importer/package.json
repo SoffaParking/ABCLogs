@@ -2,7 +2,7 @@
   "name": "@apiloupe/importer",
   "version": "0.0.0",
   "private": true,
-  "description": "apiloupe-import: send existing JSON logs (pino and friends) to an apiloupe server.",
+  "description": "apiloupe-import: send existing JSON logs (pino and friends) from files, pipes or AWS CloudWatch Logs to an apiloupe server.",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -24,6 +24,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@apiloupe/shared": "workspace:*"
+    "@apiloupe/shared": "workspace:*",
+    "@aws-sdk/client-cloudwatch-logs": "3.1146.0"
   }
 }
