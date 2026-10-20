@@ -1,0 +1,29 @@
+{
+  "name": "@apiloupe/importer",
+  "version": "0.0.0",
+  "private": true,
+  "description": "apiloupe-import: send existing JSON logs (pino and friends) to an apiloupe server.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "apiloupe-import": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@apiloupe/shared": "workspace:*"
+  }
+}

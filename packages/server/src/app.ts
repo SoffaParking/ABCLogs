@@ -1,19 +1,42 @@
 import { existsSync } from 'node:fs';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { LogController, type FastifyError, type FastifyInstance } from 'fastify';
 import type pg from 'pg';
 import { LEVEL_NAMES } from '@apiloupe/shared';
+import { eventRoutes } from './api/events.js';
+import { projectRoutes } from './api/projects.js';
+import { statsRoutes } from './api/stats.js';
+import { userRoutes } from './api/users.js';
+import { installSessionHooks } from './auth/guard.js';
+import { authRoutes } from './auth/routes.js';
+import { SetupGate } from './auth/setup.js';
 import type { Config } from './config.js';
+import type { AppContext } from './context.js';
 import { pingDatabase } from './db.js';
+import { HttpError } from './http.js';
+import { IngestKeys } from './ingest/keys.js';
+import { ingestRoutes } from './ingest/routes.js';
+import { Partitions } from './partitions.js';
 
 export interface AppDeps {
   config: Config;
   pool: pg.Pool | null;
 }
 
-export async function buildApp({ config, pool }: AppDeps): Promise<FastifyInstance> {
-  const app = Fastify({ logger: { level: config.logLevel } });
+export interface App extends FastifyInstance {
+  /** Shared state for the routes; null without a database. */
+  ctx: AppContext | null;
+}
+
+export async function buildApp({ config, pool }: AppDeps): Promise<App> {
+  const app = Fastify({
+    logger: { level: config.logLevel },
+    trustProxy: config.trustProxy,
+    // Every ingest batch is a request; logging each one would drown the
+    // server's own log. Failures are still logged by the error handler.
+    logController: new LogController({ disableRequestLogging: true }),
+  }) as unknown as App;
 
   // The dashboard loads nothing from other origins, so the policy can be tight.
   // Every directive is listed (useDefaults off): helmet's defaults would add a
@@ -42,6 +65,18 @@ export async function buildApp({ config, pool }: AppDeps): Promise<FastifyInstan
     referrerPolicy: { policy: 'no-referrer' },
   });
 
+  app.setErrorHandler((err: FastifyError | HttpError, req, reply) => {
+    const status = err.statusCode ?? 500;
+    if (err instanceof HttpError) {
+      for (const [name, value] of Object.entries(err.headers)) void reply.header(name, value);
+    }
+    if (status >= 500) {
+      req.log.error({ err, url: req.url, method: req.method }, 'request failed');
+      return reply.code(status).send({ error: status === 503 ? err.message : 'internal error' });
+    }
+    return reply.code(status).send({ error: err.message });
+  });
+
   // Liveness: the process is up. Never touches the database, so a database
   // outage does not get the container restarted in a loop.
   app.get('/healthz', () => ({ status: 'ok' }));
@@ -57,20 +92,74 @@ export async function buildApp({ config, pool }: AppDeps): Promise<FastifyInstan
       .send({ status: ok ? 'ok' : 'unavailable', database: ok ? 'ok' : 'unreachable' });
   });
 
-  // A tiny API route so the placeholder page can prove the UI reaches the server.
-  app.get('/api/v1/meta', () => ({ name: 'apiloupe', levels: LEVEL_NAMES }));
-
-  if (existsSync(config.publicDir)) {
-    await app.register(fastifyStatic, { root: config.publicDir });
-    // Client-side routes fall back to the app shell; unknown API and ingest
-    // paths stay 404s.
-    app.setNotFoundHandler((req, reply) => {
-      if (req.method === 'GET' && !/^\/(api|ingest)\//.test(req.url)) {
-        return reply.sendFile('index.html');
+  app.ctx = pool
+    ? {
+        config,
+        pool,
+        partitions: new Partitions(pool),
+        keys: new IngestKeys(pool),
+        setup: new SetupGate(pool, app.log, config.setupCode),
       }
-      return reply.code(404).send({ error: 'Not found' });
+    : null;
+  const ctx = app.ctx;
+
+  await app.register(
+    (api, _opts, done) => {
+      // Dashboard data is private; no cache along the way may keep a copy.
+      api.addHook('onRequest', (_req, reply, next) => {
+        void reply.header('cache-control', 'no-store');
+        next();
+      });
+      api.get('/meta', () => ({ name: 'apiloupe', levels: LEVEL_NAMES }));
+      if (ctx) {
+        installSessionHooks(api, ctx);
+        authRoutes(api, ctx);
+        userRoutes(api, ctx);
+        projectRoutes(api, ctx);
+        statsRoutes(api, ctx);
+        eventRoutes(api, ctx);
+      }
+      done();
+    },
+    { prefix: '/api/v1' },
+  );
+
+  if (ctx) {
+    await app.register(
+      (ingest, _opts, done) => {
+        ingestRoutes(ingest, ctx);
+        done();
+      },
+      { prefix: '/ingest/v1' },
+    );
+  }
+
+  const hasUi = existsSync(config.publicDir);
+  if (hasUi) {
+    await app.register(fastifyStatic, {
+      root: config.publicDir,
+      setHeaders: (res, path) => {
+        // Built assets have content hashes in their names; the page itself must
+        // be re-fetched so a new release is picked up.
+        void res.header(
+          'cache-control',
+          path.includes('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache',
+        );
+      },
     });
   }
+  // Client-side routes fall back to the app shell; unknown API and ingest
+  // paths stay JSON 404s.
+  app.setNotFoundHandler((req, reply) => {
+    if (
+      hasUi &&
+      (req.method === 'GET' || req.method === 'HEAD') &&
+      !/^\/(api|ingest)\//.test(req.url)
+    ) {
+      return reply.header('cache-control', 'no-cache').sendFile('index.html');
+    }
+    return reply.code(404).send({ error: 'not found' });
+  });
 
   return app;
 }

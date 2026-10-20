@@ -83,6 +83,7 @@ describe('dashboard hosting', () => {
     const shell = await app.inject({ url: '/issues/42' });
     expect(shell.statusCode).toBe(200);
     expect(shell.body).toContain('<title>apiloupe</title>');
+    expect((await app.inject({ method: 'HEAD', url: '/issues/42' })).statusCode).toBe(200);
 
     expect((await app.inject({ url: '/api/v1/nope' })).statusCode).toBe(404);
     expect((await app.inject({ url: '/ingest/v1/nope' })).statusCode).toBe(404);
