@@ -1095,3 +1095,43 @@ select {
     display: none;
   }
 }
+
+/* ---------- live tail and sampling ---------- */
+
+.tail-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.tail-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ok);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.tail-dot.paused {
+  background: var(--muted);
+  animation: none;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tail-dot {
+    animation: none;
+  }
+}
+.sampled {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Results for the old filters, while the new ones load. */
+.card.stale {
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}

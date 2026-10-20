@@ -515,6 +515,22 @@ function Users({ me }: { me: User }) {
   );
 }
 
+function About() {
+  const meta = useQuery({
+    queryKey: ['meta'],
+    queryFn: () => api.get<{ name: string; version: string }>('/meta'),
+    staleTime: Infinity,
+  });
+  return (
+    <p className="muted small">
+      apiloupe {meta.data?.version ?? ''} ·{' '}
+      <a href="https://github.com/emaalouf/apiloupe" target="_blank" rel="noreferrer">
+        github.com/emaalouf/apiloupe
+      </a>
+    </p>
+  );
+}
+
 function Account({ user }: { user: User }) {
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -532,6 +548,7 @@ function Account({ user }: { user: User }) {
           {user.name && <strong>{user.name} </strong>}
           {user.email} · {user.role}
         </p>
+        <About />
       </Card>
       <Card title="Change password">
         <form

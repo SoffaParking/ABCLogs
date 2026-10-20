@@ -1,5 +1,6 @@
 {
   "name": "apiloupe",
+  "version": "1.0.0",
   "private": true,
   "description": "Self-hosted API request and error dashboard: request volume, latency, severity breakdown and grouped errors.",
   "license": "MIT",
@@ -15,10 +16,11 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
+    "test": "pnpm -r --filter \"!@apiloupe/e2e\" test",
     "db:up": "docker compose up -d db",
     "import-logs": "tsx --conditions=source packages/importer/src/cli.ts",
-    "demo": "tsx --conditions=source packages/importer/src/cli.ts --demo"
+    "demo": "tsx --conditions=source packages/importer/src/cli.ts --demo",
+    "test:e2e": "pnpm --filter @apiloupe/e2e test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

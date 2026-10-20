@@ -7,3 +7,6 @@ coverage
 !.env.example
 packages/server/public
 .DS_Store
+e2e/.auth/
+e2e/test-results/
+e2e/playwright-report/
