@@ -3,6 +3,7 @@ import { loadConfig } from './config.js';
 import { createPool } from './db.js';
 import { scheduleMaintenance } from './maintenance.js';
 import { migrate } from './migrate.js';
+import { groupStoredErrors } from './reprocess.js';
 
 const config = loadConfig();
 if (!config.databaseUrl) {
@@ -37,6 +38,8 @@ const stopMaintenance = scheduleMaintenance(
 );
 // Prints the setup code when there are no users yet.
 await app.ctx!.setup.required();
+// Errors stored before issues existed get grouped, in the background.
+void groupStoredErrors(pool, app.log);
 
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, 'shutting down');

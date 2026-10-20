@@ -49,6 +49,7 @@ interface LogRow {
   has_stack?: boolean;
   error_stack?: string | null;
   attrs?: unknown;
+  issue_id?: number | null;
 }
 
 function requestOut(row: RequestRow) {
@@ -80,6 +81,9 @@ function logOut(row: LogRow) {
     ...(row.has_stack !== undefined ? { hasStack: row.has_stack } : {}),
     ...(row.error_stack !== undefined ? { errorStack: row.error_stack } : {}),
     ...(row.attrs !== undefined ? { attrs: row.attrs } : {}),
+    ...(row.issue_id !== undefined
+      ? { issueId: row.issue_id === null ? null : Number(row.issue_id) }
+      : {}),
   };
 }
 
@@ -87,7 +91,7 @@ const REQUEST_COLUMNS =
   'time, id, service, level, method, route, path, status, duration_ms, request_id';
 const LOG_PREVIEW_COLUMNS = `time, id, service, level, left(message, ${PREVIEW_CHARS}) AS message,
   request_id, error_type, left(error_message, ${PREVIEW_CHARS}) AS error_message,
-  error_stack IS NOT NULL AS has_stack`;
+  error_stack IS NOT NULL AS has_stack, issue_id`;
 
 /** Raw request and log events: filtered lists, newest first, and single-event detail. */
 export function eventRoutes(app: FastifyInstance, ctx: AppContext): void {
@@ -203,7 +207,7 @@ export function eventRoutes(app: FastifyInstance, ctx: AppContext): void {
     const ref = decodeRef(req.params.ref);
     const { rows } = await ctx.pool.query<LogRow>(
       `SELECT time, id, service, level, message, request_id, error_type, error_message,
-              error_stack, attrs
+              error_stack, attrs, issue_id
          FROM log_events WHERE project_id = $1 AND time = $2 AND id = $3`,
       [project.id, new Date(ref.time), ref.id],
     );

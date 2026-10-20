@@ -36,10 +36,12 @@ export async function runMaintenance(
        SELECT (SELECT count(*) FROM a) + (SELECT count(*) FROM b) AS n`,
       [cutoff],
     );
-    // Ingest stats are tiny; keep them four times as long as events.
-    await client.query('DELETE FROM ingest_stats_hourly WHERE hour < $1', [
-      new Date(now - 4 * retentionDays * DAY_MS),
-    ]);
+    // Ingest stats and issues are small; keep them four times as long as
+    // events, so an issue that comes back within that time is a regression.
+    const longCutoff = new Date(now - 4 * retentionDays * DAY_MS);
+    await client.query('DELETE FROM ingest_stats_hourly WHERE hour < $1', [longCutoff]);
+    await client.query('DELETE FROM issue_counts_hourly WHERE hour < $1', [longCutoff]);
+    await client.query('DELETE FROM issues WHERE last_seen < $1', [longCutoff]);
     await client.query('DELETE FROM sessions WHERE expires_at < now()');
     await client.query(
       `DELETE FROM invites WHERE expires_at < now() - interval '30 days' OR accepted_at < now() - interval '30 days'`,
