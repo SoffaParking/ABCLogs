@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mapLogLine, parseTime } from '../src/index.js';
+import { mapLogLine, parseTime, unwrapLine } from '../src/index.js';
 import { eventIdForLine } from '../src/node.js';
 
 const T = '2026-10-19T12:00:00.000Z';
@@ -202,5 +202,36 @@ describe('eventIdForLine', () => {
     expect(eventIdForLine(line)).toBe(eventIdForLine(`  ${line}\n`));
     expect(eventIdForLine(line)).toMatch(/^[0-9a-f]{32}$/);
     expect(eventIdForLine(line)).not.toBe(eventIdForLine(`{"time":"${T}","msg":"b"}`));
+  });
+});
+
+describe('unwrapLine', () => {
+  const app = '{"level":30,"time":"2026-10-19T12:00:00.000Z","msg":"hi"}';
+
+  it("takes the app's line out of Docker and FireLens envelopes", () => {
+    expect(
+      unwrapLine(
+        JSON.stringify({ log: `${app}\n`, stream: 'stdout', time: '2026-10-19T12:00:00.1Z' }),
+      ),
+    ).toBe(app);
+    expect(
+      unwrapLine(
+        JSON.stringify({
+          container_id: 'abc',
+          container_name: '/api',
+          source: 'stdout',
+          log: app,
+          ecs_cluster: 'c',
+        }),
+      ),
+    ).toBe(app);
+  });
+
+  it('leaves everything else alone, including app lines that have a log field', () => {
+    expect(unwrapLine(app)).toBe(app);
+    expect(unwrapLine('plain text with "log" in it')).toBe('plain text with "log" in it');
+    const own = JSON.stringify({ level: 30, log: 'audit', msg: 'x' });
+    expect(unwrapLine(own)).toBe(own);
+    expect(unwrapLine(JSON.stringify({ log: 5 }))).toBe(JSON.stringify({ log: 5 }));
   });
 });
