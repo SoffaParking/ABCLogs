@@ -1,0 +1,83 @@
+# apiloupe on one server: the app, its Postgres, Caddy in front for HTTPS,
+# and a nightly database backup. Started by user-data.sh on first boot;
+# settings come from /opt/apiloupe/deploy/ec2/.env (written there, never committed).
+name: apiloupe
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: apiloupe
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_DB: apiloupe
+    # Sized for a 2 GB machine shared with the app.
+    command: >-
+      postgres -c shared_buffers=256MB -c effective_cache_size=768MB -c work_mem=8MB
+      -c maintenance_work_mem=128MB -c max_connections=40 -c wal_compression=on
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U apiloupe -d apiloupe']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build: ../..
+    image: apiloupe:local
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://apiloupe:${POSTGRES_PASSWORD}@db:5432/apiloupe
+      PUBLIC_URL: https://${DOMAIN:?set in .env}
+      TRUST_PROXY: 'true'
+      RETENTION_DAYS: ${RETENTION_DAYS:-14}
+      SETUP_CODE: ${SETUP_CODE:-}
+      LOG_LEVEL: info
+    depends_on:
+      db:
+        condition: service_healthy
+
+  caddy:
+    image: caddy:2.11-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+  # pg_dump every night at 02:30 UTC into the backups volume, keeping 7 days.
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - backups:/backups
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - |
+        while true; do
+          now=$$(date -u +%s); next=$$(date -u -d "$$(date -u +%Y-%m-%d) 02:30" +%s 2>/dev/null || echo 0)
+          [ "$$next" -le "$$now" ] && next=$$((next + 86400))
+          sleep $$((next - now))
+          file=/backups/apiloupe-$$(date -u +%Y%m%d).sql.gz
+          if pg_dump -h db -U apiloupe -d apiloupe | gzip > "$$file.tmp"; then mv "$$file.tmp" "$$file"; else rm -f "$$file.tmp"; fi
+          find /backups -name 'apiloupe-*.sql.gz' -mtime +7 -delete
+        done
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:
+  backups:

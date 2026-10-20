@@ -61,6 +61,8 @@ docker compose exec app apiloupe-import --demo 120 --key alk_...
 Before running it anywhere but your own machine, change `POSTGRES_PASSWORD`
 (and `DATABASE_URL` to match) in `docker-compose.yml`, put it behind a TLS
 proxy, and set `PUBLIC_URL` to the https address people will use.
+[deploy/ec2](deploy/ec2) does all of that on one small AWS server with a
+single command, HTTPS and nightly backups included.
 
 ## Sending data
 

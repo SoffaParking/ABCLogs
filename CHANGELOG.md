@@ -6,6 +6,15 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-20
+
+### Added
+
+- `deploy/ec2`: one command launches apiloupe on a small EC2 server (Ubuntu
+  24.04, arm64) with Caddy for HTTPS, Postgres sized for 2 GB, a nightly
+  `pg_dump` kept for 7 days, SSH open to your address only, IMDSv2 and an
+  encrypted disk. `upgrade.sh` moves the server to another release.
+
 ## [0.4.0] - 2026-10-20
 
 ### Added
