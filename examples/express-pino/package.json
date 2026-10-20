@@ -1,0 +1,16 @@
+{
+  "name": "@apiloupe/example-express-pino",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A small Express + pino API sending its requests, logs and errors to apiloupe.",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@apiloupe/node": "workspace:*",
+    "express": "4.22.3",
+    "pino": "10.4.0"
+  }
+}

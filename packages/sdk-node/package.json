@@ -1,0 +1,57 @@
+{
+  "name": "@apiloupe/node",
+  "version": "0.2.0",
+  "description": "Send your Node.js API's requests, logs and errors to apiloupe. Express middleware and a pino stream; no dependencies.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/emaalouf/apiloupe.git",
+    "directory": "packages/sdk-node"
+  },
+  "keywords": [
+    "apiloupe",
+    "logging",
+    "monitoring",
+    "express",
+    "pino",
+    "errors"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.cts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check:package": "node scripts/check-package.mjs"
+  },
+  "devDependencies": {
+    "@apiloupe/shared": "workspace:*",
+    "esbuild": "0.28.2",
+    "express": "4.22.3",
+    "express5": "npm:express@5.2.1",
+    "pino": "10.4.0",
+    "@types/express": "4.17.25"
+  }
+}
