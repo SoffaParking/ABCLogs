@@ -1,6 +1,6 @@
 {
   "name": "@apiloupe/importer",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "apiloupe-import: send existing JSON logs (pino and friends) from files, pipes or AWS CloudWatch Logs to an apiloupe server.",
   "license": "MIT",

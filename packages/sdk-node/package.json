@@ -1,6 +1,6 @@
 {
   "name": "@apiloupe/node",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Send your Node.js API's requests, logs and errors to the Soffa API Logs Dashboard. Express middleware and a pino stream; no dependencies.",
   "license": "MIT",
   "type": "module",

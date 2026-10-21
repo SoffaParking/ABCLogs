@@ -1,6 +1,6 @@
 {
   "name": "@apiloupe/shared",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "Event schema, level normalisation and helpers shared by the Soffa API Logs Dashboard server, SDK and importer.",
   "license": "MIT",

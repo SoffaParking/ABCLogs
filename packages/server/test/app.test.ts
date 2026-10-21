@@ -97,7 +97,7 @@ describe('dashboard hosting', () => {
     const res = await app.inject({ url: '/api/v1/meta' });
     expect(res.json()).toEqual({
       name: 'Soffa API Logs Dashboard',
-      version: '1.1.0',
+      version: '1.2.0',
       levels: ['trace', 'debug', 'info', 'warn', 'error', 'fatal'],
     });
   });

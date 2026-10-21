@@ -162,8 +162,12 @@ curl -X POST https://apiloupe.example.com/ingest/v1/events \
 The first admin is created in the browser with the setup code from the server
 log, so whoever reaches a fresh server first cannot claim it. Admins invite
 people from **Settings → Users** with a one-time link (the dashboard sends
-no email). Members see every project and can resolve and ignore issues; admins
-also manage projects, keys and users.
+no email). Everyone sees every project. There are three roles:
+
+- **Viewer:** reads everything and changes nothing; for people outside the
+  team. Invites default to it.
+- **Member:** also resolves, ignores and reopens issues.
+- **Admin:** also manages projects, ingest keys and users.
 
 ```sh
 echo 'a long password' | apiloupe-server create-admin --email you@example.com

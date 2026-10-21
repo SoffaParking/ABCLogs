@@ -216,6 +216,33 @@ describe.skipIf(!hasDatabase)('issues', () => {
     expect((await setStatus(range.id, 'bogus')).statusCode).toBe(400);
   });
 
+  it('a viewer sees the issues but cannot change them', async () => {
+    const range = (await issues('&status=ignored')).items.find((i) =>
+      i.title.startsWith('RangeError'),
+    )!;
+    const invite = await t.app.inject({
+      method: 'POST',
+      url: '/api/v1/invites',
+      headers: { cookie, origin: ORIGIN },
+      payload: { email: 'viewer@example.com', role: 'viewer' },
+    });
+    const viewer = cookieFrom(
+      await t.app.inject({
+        method: 'POST',
+        url: `/api/v1/auth/invites/${invite.json<{ token: string }>().token}/accept`,
+        headers: { origin: ORIGIN },
+        payload: { name: 'V', password: 'correct horse battery' },
+      }),
+    );
+    const seen = await get<{ items: IssueItem[] }>('/issues?status=ignored', viewer);
+    expect(seen.items.map((i) => i.id)).toContain(range.id);
+    await get(`/issues/${range.id}`, viewer);
+
+    expect((await setStatus(range.id, 'unresolved', viewer)).statusCode).toBe(403);
+    const after = (await issues('&status=ignored')).items.find((i) => i.id === range.id)!;
+    expect(after.status).toBe('ignored');
+  });
+
   it('numbers issues densely: batches that only add occurrences use up no numbers', async () => {
     const before = Number(
       (await t.pool.query<{ max: number }>('SELECT max(id) AS max FROM issues')).rows[0]!.max,

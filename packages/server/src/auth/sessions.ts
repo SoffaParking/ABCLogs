@@ -8,7 +8,8 @@ const DAY_MS = 86_400_000;
 // busy dashboard does not write on every request.
 const TOUCH_EVERY_MS = 10 * 60_000;
 
-export type Role = 'admin' | 'member';
+/** Admins manage everything; members also triage issues; viewers only look. */
+export type Role = 'admin' | 'member' | 'viewer';
 
 export interface SessionUser {
   id: number;

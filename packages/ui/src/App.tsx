@@ -78,8 +78,12 @@ export function App() {
       <Switch>
         <Route path="/">{() => <Home isAdmin={user.role === 'admin'} />}</Route>
         <Route path="/p/:slug">{(p) => <OverviewPage slug={p.slug} />}</Route>
-        <Route path="/p/:slug/issues">{(p) => <IssuesPage slug={p.slug} />}</Route>
-        <Route path="/p/:slug/issues/:id">{(p) => <IssuePage slug={p.slug} id={p.id} />}</Route>
+        <Route path="/p/:slug/issues">
+          {(p) => <IssuesPage slug={p.slug} canTriage={user.role !== 'viewer'} />}
+        </Route>
+        <Route path="/p/:slug/issues/:id">
+          {(p) => <IssuePage slug={p.slug} id={p.id} canTriage={user.role !== 'viewer'} />}
+        </Route>
         <Route path="/p/:slug/requests">{(p) => <RequestsPage slug={p.slug} />}</Route>
         <Route path="/p/:slug/logs">{(p) => <LogsPage slug={p.slug} />}</Route>
         <Route path="/settings/:tab?/:item?">

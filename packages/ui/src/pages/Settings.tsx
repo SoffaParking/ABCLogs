@@ -379,7 +379,8 @@ function Users({ me }: { me: User }) {
     queryFn: () => api.get<{ users: UserRow[]; invites: InviteRow[] }>('/users'),
   });
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<Role>('member');
+  // The least access by default: someone outside the team only needs to look.
+  const [role, setRole] = useState<Role>('viewer');
   const [link, setLink] = useState<string | null>(null);
   const refresh = () => void qc.invalidateQueries({ queryKey: ['users'] });
   const update = useMutation({
@@ -427,6 +428,7 @@ function Users({ me }: { me: User }) {
                     disabled={u.id === me.id}
                     onChange={(e) => update.mutate({ id: u.id, role: e.target.value as Role })}
                   >
+                    <option value="viewer">viewer</option>
                     <option value="member">member</option>
                     <option value="admin">admin</option>
                   </select>
@@ -471,8 +473,9 @@ function Users({ me }: { me: User }) {
             onChange={(e) => setEmail(e.target.value)}
           />
           <select aria-label="Role" value={role} onChange={(e) => setRole(e.target.value as Role)}>
-            <option value="member">member: can view</option>
-            <option value="admin">admin: can also manage</option>
+            <option value="viewer">viewer: can view</option>
+            <option value="member">member: can also resolve and ignore issues</option>
+            <option value="admin">admin: can also manage projects, keys and users</option>
           </select>
           <button className="button primary" disabled={invite.isPending}>
             Create invite link
