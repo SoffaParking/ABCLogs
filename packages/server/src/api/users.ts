@@ -10,9 +10,13 @@ const INVITE_DAYS = 7;
 
 type IdParams = { Params: { id: string } };
 
+const ROLES: readonly Role[] = ['admin', 'member', 'viewer'];
+
 function role(value: unknown): Role {
-  if (value !== 'admin' && value !== 'member') throw badRequest('role must be "admin" or "member"');
-  return value;
+  if (!ROLES.includes(value as Role)) {
+    throw badRequest('role must be "admin", "member" or "viewer"');
+  }
+  return value as Role;
 }
 
 /** Admin-only: the user list, role and access changes, and invite links. */
@@ -63,7 +67,7 @@ export function userRoutes(app: FastifyInstance, ctx: AppContext): void {
       throw badRequest('disabled must be true or false');
     }
     const disable = body.disabled;
-    if (id === me.id && (disable === true || newRole === 'member')) {
+    if (id === me.id && (disable === true || (newRole !== undefined && newRole !== 'admin'))) {
       throw conflict('you cannot disable or demote yourself; ask another admin');
     }
     await withTransaction(ctx.pool, async (client) => {

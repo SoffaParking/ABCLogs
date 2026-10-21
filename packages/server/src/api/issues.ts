@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { requireUser } from '../auth/guard.js';
+import { requireEditor, requireUser } from '../auth/guard.js';
 import type { AppContext } from '../context.js';
 import { badRequest, bodyObject, notFound } from '../http.js';
 import {
@@ -340,7 +340,7 @@ export function issueRoutes(app: FastifyInstance, ctx: AppContext): void {
   });
 
   app.patch<IdParams>('/projects/:slug/issues/:id', async (req) => {
-    requireUser(req);
+    requireEditor(req);
     const project = await projectBySlug(ctx.pool, req.params.slug);
     const status = bodyObject(req.body).status;
     if (!STATUSES.includes(status as Status)) {

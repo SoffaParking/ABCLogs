@@ -152,6 +152,54 @@ describe.skipIf(!hasDatabase)('sign-in and accounts', () => {
     expect((await post('/api/v1/projects', { name: 'Nope' }, memberCookie)).statusCode).toBe(403);
   });
 
+  it('a viewer reads everything and changes nothing but their own password', async () => {
+    expect(
+      (
+        await post('/api/v1/invites', { email: 'x@example.com', role: 'owner' }, adminCookie)
+      ).json(),
+    ).toMatchObject({ error: 'role must be "admin", "member" or "viewer"' });
+
+    const invite = await post(
+      '/api/v1/invites',
+      { email: 'viewer@example.com', role: 'viewer' },
+      adminCookie,
+    );
+    expect(invite.statusCode).toBe(201);
+    const { token } = invite.json<{ token: string }>();
+    const accepted = await post(`/api/v1/auth/invites/${token}/accept`, {
+      name: 'View',
+      password: PASSWORD,
+    });
+    expect(accepted.statusCode).toBe(201);
+    const viewerCookie = cookieFrom(accepted);
+    const me = await t.app.inject({ url: '/api/v1/auth/me', headers: { cookie: viewerCookie } });
+    expect(me.json()).toMatchObject({ user: { email: 'viewer@example.com', role: 'viewer' } });
+
+    expect(
+      (await t.app.inject({ url: '/api/v1/projects', headers: { cookie: viewerCookie } }))
+        .statusCode,
+    ).toBe(200);
+    expect(
+      (await t.app.inject({ url: '/api/v1/users', headers: { cookie: viewerCookie } })).statusCode,
+    ).toBe(403);
+    // Refused before the issue is even looked up.
+    const triage = await t.app.inject({
+      method: 'PATCH',
+      url: '/api/v1/projects/any/issues/1',
+      payload: { status: 'resolved' },
+      headers: { cookie: viewerCookie, origin: ORIGIN },
+    });
+    expect(triage.statusCode).toBe(403);
+    expect(triage.json()).toMatchObject({ error: 'viewers can only look' });
+
+    const password = await post(
+      '/api/v1/auth/password',
+      { currentPassword: PASSWORD, newPassword: 'a viewer password' },
+      viewerCookie,
+    );
+    expect(password.statusCode).toBe(204);
+  });
+
   it('disabling a user ends their sessions; the last admin cannot be removed', async () => {
     const users = (
       await t.app.inject({ url: '/api/v1/users', headers: { cookie: adminCookie } })
@@ -188,6 +236,7 @@ describe.skipIf(!hasDatabase)('sign-in and accounts', () => {
     // Promote the member, then the original admin may step down.
     await patch(member.id, { disabled: false, role: 'admin' });
     expect((await patch(admin.id, { role: 'member' })).statusCode).toBe(409); // not yourself
+    expect((await patch(admin.id, { role: 'viewer' })).statusCode).toBe(409);
   });
 
   it('changing your password signs out your other sessions', async () => {

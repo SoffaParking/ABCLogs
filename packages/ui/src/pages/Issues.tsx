@@ -95,7 +95,8 @@ export function IssueBadges({ issue, since }: { issue: Issue; since?: number }) 
   );
 }
 
-export function IssuesPage({ slug }: { slug: string }) {
+/** `canTriage` is false for viewers: the resolve / ignore / reopen buttons are left out. */
+export function IssuesPage({ slug, canTriage }: { slug: string; canTriage: boolean }) {
   const [params, patch] = useQueryState();
   const refetchInterval = useRefreshInterval();
   const range = params.get('range');
@@ -190,7 +191,7 @@ export function IssuesPage({ slug }: { slug: string }) {
                   <th className="num">In range</th>
                   <th className="num hide-narrow">Total</th>
                   <th className="hide-narrow">Last seen</th>
-                  <th />
+                  {canTriage && <th />}
                 </tr>
               </thead>
               <tbody>
@@ -220,9 +221,11 @@ export function IssuesPage({ slug }: { slug: string }) {
                       {formatCount(issue.count, { compact: true })}
                     </td>
                     <td className="muted nowrap hide-narrow">{formatAgo(issue.lastSeen)}</td>
-                    <td className="num">
-                      <IssueActions slug={slug} issue={issue} compact />
-                    </td>
+                    {canTriage && (
+                      <td className="num">
+                        <IssueActions slug={slug} issue={issue} compact />
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -254,7 +257,15 @@ export function IssuesPage({ slug }: { slug: string }) {
   );
 }
 
-export function IssuePage({ slug, id }: { slug: string; id: string }) {
+export function IssuePage({
+  slug,
+  id,
+  canTriage,
+}: {
+  slug: string;
+  id: string;
+  canTriage: boolean;
+}) {
   const [params] = useQueryState();
   const [, navigate] = useLocation();
   const refetchInterval = useRefreshInterval();
@@ -291,7 +302,7 @@ export function IssuePage({ slug, id }: { slug: string; id: string }) {
             )}
           </div>
         </div>
-        <IssueActions slug={slug} issue={issue} />
+        {canTriage && <IssueActions slug={slug} issue={issue} />}
       </div>
 
       <div className="stats">

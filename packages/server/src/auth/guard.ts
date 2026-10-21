@@ -72,3 +72,10 @@ export function requireAdmin(req: FastifyRequest): SessionUser {
   if (user.role !== 'admin') throw forbidden('admins only');
   return user;
 }
+
+/** The signed-in user if they may change data (admins and members), or a 401/403. */
+export function requireEditor(req: FastifyRequest): SessionUser {
+  const user = requireUser(req);
+  if (user.role === 'viewer') throw forbidden('viewers can only look');
+  return user;
+}

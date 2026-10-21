@@ -6,6 +6,26 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-21
+
+### Added
+
+- **Viewer role:** sees every project, page and issue, and changes nothing.
+  The resolve, ignore and reopen buttons are hidden, and the server refuses
+  those changes with 403. Viewers can still change their own password. Use it
+  for people outside the team. Invites now default to viewer, the least
+  access; pick member or admin when inviting your own team.
+
+### Changed
+
+- An admin can no longer demote themselves to viewer either (as before with
+  member), so there is always someone who can manage the server.
+
+### Upgrading
+
+Migration `004_viewer_role` runs by itself when 1.2.0 starts; existing users
+and invites keep their roles.
+
 ## [1.1.0] - 2026-10-20
 
 ### Changed

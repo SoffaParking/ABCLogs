@@ -42,7 +42,7 @@ sudo docker compose ps                     # what is running
 sudo docker compose logs -f app            # the server's log
 sudo docker compose exec app apiloupe-server reset-password --email you@example.com
 sudo docker compose exec app apiloupe-import --cloudwatch --log-group /ecs/my-api --since 14d --key alk_...
-sudo /opt/apiloupe/deploy/ec2/upgrade.sh v1.1.0   # move to another release
+sudo /opt/apiloupe/deploy/ec2/upgrade.sh v1.2.0   # move to another release
 ```
 
 The settings are in `/opt/apiloupe/deploy/ec2/.env`, written on first boot:

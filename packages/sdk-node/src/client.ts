@@ -30,7 +30,7 @@ import { post } from './transport.js';
 
 const gzip = promisify(gzipCallback);
 
-export const VERSION = '1.1.0';
+export const VERSION = '1.2.0';
 
 /** A queued item: a ready event, or a raw log line mapped only when sent (off the hot path). */
 type Item = { event: EventInput } | { line: string; stream: StreamConfig };

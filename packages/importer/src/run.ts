@@ -205,7 +205,7 @@ async function request(url: string, init: RequestInit, options: ImportOptions): 
   const headers = {
     ...(init.headers as Record<string, string> | undefined),
     authorization: `Bearer ${options.key ?? ''}`,
-    'user-agent': options.userAgent ?? 'apiloupe-import/1.1.0',
+    'user-agent': options.userAgent ?? 'apiloupe-import/1.2.0',
   };
   for (let attempt = 1; ; attempt++) {
     let wait: number;

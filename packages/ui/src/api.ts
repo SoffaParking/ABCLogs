@@ -55,7 +55,8 @@ export const api = {
   delete: <T = void>(path: string) => call<T>('DELETE', path),
 };
 
-export type Role = 'admin' | 'member';
+/** Admins manage everything; members also triage issues; viewers only look. */
+export type Role = 'admin' | 'member' | 'viewer';
 
 export interface User {
   id: number;
