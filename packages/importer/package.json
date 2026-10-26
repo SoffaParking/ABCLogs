@@ -25,6 +25,6 @@
   },
   "dependencies": {
     "@apiloupe/shared": "workspace:*",
-    "@aws-sdk/client-cloudwatch-logs": "3.1146.0"
+    "@aws-sdk/client-cloudwatch-logs": "3.1156.0"
   }
 }
