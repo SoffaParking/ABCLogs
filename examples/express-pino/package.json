@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@apiloupe/node": "workspace:*",
-    "express": "4.22.3",
+    "express": "5.3.0",
     "pino": "10.4.0"
   }
 }
