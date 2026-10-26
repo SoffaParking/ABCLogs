@@ -21,7 +21,7 @@
   "dependencies": {
     "@apiloupe/shared": "workspace:*",
     "@fastify/helmet": "13.2.0",
-    "@fastify/static": "10.1.6",
+    "@fastify/static": "10.1.7",
     "fastify": "5.12.7",
     "pg": "8.23.1"
   },
